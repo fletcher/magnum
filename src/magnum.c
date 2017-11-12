@@ -28,7 +28,7 @@
 	parson is Copyright (c) 2012 - 2017 Krzysztof Gabis and is licensed under
 	the MIT License.
 
-	Portions inspired by `mustatch` by José Bollo <jobol@nonadev.net>, licensed
+	Portions inspired by `mustach` by José Bollo <jobol@nonadev.net>, licensed
 	under the Apache License, Version 2.0:
 
 		http://www.apache.org/licenses/LICENSE-2.0
