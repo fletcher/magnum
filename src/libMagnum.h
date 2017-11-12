@@ -94,4 +94,10 @@ int magnum_populate_from_string(DString * source, const char * string, DString *
 /// The resulting text will be appended to `out`.
 int magnum_populate_from_file(DString * source, const char * fname, DString * out, const char * search_directory);
 
+
+/// Simplified method to allow use without any other included files.
+/// Useful if you have no other need for parson or d_string
+int magnum_populate_char_only(const char * source, const char * string, char ** out, const char * search_directory);
+
+
 #endif

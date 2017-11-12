@@ -781,6 +781,30 @@ int magnum_populate_from_file(DString * source, const char * fname, DString * ou
 }
 
 
+/// Simplified method to allow use without any other included files.
+/// Useful if you have no other need for parson or d_string
+int magnum_populate_char_only(const char * source, const char * string, char ** out, const char * search_directory) {
+	JSON_Value * v = json_parse_string(string);
+
+	DString * d_source = d_string_new("");
+	free(d_source->str);
+	d_source->str = (char *) source;
+
+	DString * temp = d_string_new("");
+
+	int rc = magnum_populate_from_json(d_source, v, temp, search_directory);
+
+	json_value_free(v);
+
+	*out = temp->str;
+	d_string_free(temp, false);
+
+	d_string_free(d_source, false);
+
+	return rc;
+}
+
+
 #ifdef TEST
 void Test_magnum(CuTest* tc) {
 	DString * source = d_string_new("");
