@@ -15,7 +15,7 @@
 
 /*
 
-	Original Code Copyright © 2017 Fletcher T. Penney.
+	Original Code Copyright © 2017-2018 Fletcher T. Penney.
 
 	## The MIT License ##
 

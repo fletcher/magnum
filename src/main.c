@@ -4,7 +4,7 @@
 
 	main.c -- Magnum main()
 
-	Copyright © 2017 Fletcher T. Penney.
+	Copyright © 2017-2018 Fletcher T. Penney.
 
 	## The MIT License ##
 
