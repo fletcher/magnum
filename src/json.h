@@ -11,7 +11,7 @@
 
 /*
 
-	Copyright © 2016-2017 Fletcher T. Penney.
+	Copyright © 2016-2018 Fletcher T. Penney.
 
 	d_string.c and d_string.h are from the MultiMarkdown v6 project:
 
