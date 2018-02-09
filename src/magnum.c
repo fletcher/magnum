@@ -124,7 +124,7 @@ static char * my_strdup(const char * source) {
 
 
 // Resolve `name` to find the proper value
-JSON_Value * find(struct closure * c, const char * name) {
+static JSON_Value * find(struct closure * c, const char * name) {
 	JSON_Object * o;
 	JSON_Value * v = NULL;
 	int i;
@@ -362,7 +362,24 @@ static int json_enter(const char * name, struct closure * c) {
 				c->depth--;
 				return 0;
 			}
+			c->stack[c->depth].count = 1;
+			c->stack[c->depth].container = NULL;
+			c->stack[c->depth].val = v;
+			c->stack[c->depth].index = 0;
+			break;
 
+		case JSONNumber:
+			if (!json_value_get_number(v)) {
+				c->depth--;
+				return 0;
+			}
+			c->stack[c->depth].count = 1;
+			c->stack[c->depth].container = NULL;
+			c->stack[c->depth].val = v;
+			c->stack[c->depth].index = 0;
+			break;
+
+		case JSONString:
 		case JSONObject:
 			c->stack[c->depth].count = 1;
 			c->stack[c->depth].container = NULL;
@@ -866,6 +883,34 @@ void Test_magnum(CuTest* tc) {
 	d_string_append(source, "* {{default_tags}}\n{{=<% %>=}}\n* <% erb_style_tags %>\n<%={{ }}=%>\n* {{ default_tags_again }}");
 	magnum_populate_from_string(source, "{}", out, NULL);
 	CuAssertStrEquals(tc, "* \n* \n* ", out->str);
+
+
+	// Section for number
+	d_string_erase(source, 0, -1);
+	d_string_erase(out, 0, -1);
+	d_string_append(source, "{{#value}}The value is {{value}}{{/value}}");
+	magnum_populate_from_string(source, "{ \"value\" : 50 }", out, NULL);
+	CuAssertStrEquals(tc, "The value is 50", out->str);
+
+	d_string_erase(out, 0, -1);
+	magnum_populate_from_string(source, "{ \"value\" : 0.0 }", out, NULL);
+	CuAssertStrEquals(tc, "", out->str);
+
+
+	// Section for string
+	d_string_erase(source, 0, -1);
+	d_string_erase(out, 0, -1);
+	d_string_append(source, "{{#value}}The value is {{value}}{{/value}}");
+	magnum_populate_from_string(source, "{ \"value\" : \"50\" }", out, NULL);
+	CuAssertStrEquals(tc, "The value is 50", out->str);
+
+	d_string_erase(out, 0, -1);
+	magnum_populate_from_string(source, "{ \"value\" : \"\" }", out, NULL);
+	CuAssertStrEquals(tc, "The value is ", out->str);
+
+	d_string_erase(out, 0, -1);
+	magnum_populate_from_string(source, "{  }", out, NULL);
+	CuAssertStrEquals(tc, "", out->str);
 
 
 	d_string_free(source, true);
