@@ -2,7 +2,7 @@
 
 	Magnum -- C implementation of Mustache logic-less templates
 
-	@file spec.c
+	@file spec_delimiters.c
 
 	@brief Bootstrap test suite from https://github.com/mustache/spec
 
