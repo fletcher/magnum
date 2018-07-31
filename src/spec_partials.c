@@ -2,7 +2,7 @@
 
 	Magnum -- C implementation of Mustache logic-less templates
 
-	@file spec_comments.c
+	@file spec_partials.c
 
 	@brief Bootstrap test suite from https://github.com/mustache/spec
 
@@ -53,7 +53,7 @@
 #ifdef TEST
 #include "CuTest.h"
 
-void Test_magnum_spec_comments(CuTest* tc) {
+void Test_magnum_spec_partials(CuTest* tc) {
 	DString * source = d_string_new("");
 	DString * out = d_string_new("");
 
@@ -64,93 +64,93 @@ void Test_magnum_spec_comments(CuTest* tc) {
 	// Shift to ../test/partials
 	strcat(cwd, "/../test/partials");
 
-	// Inline
-	// Comment blocks should be removed from the template.
+	// Basic Behavior
+	// The greater-than operator should expand to the named partial.
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
-	d_string_append(source, "12345{{! Comment Block! }}67890");
+	d_string_append(source, "\"{{>text1}}\"");
 	magnum_populate_from_string(source, "{}", out, cwd);
-	CuAssertStrEquals(tc, "1234567890", out->str);
+	CuAssertStrEquals(tc, "\"from partial\"", out->str);
 
-	// Multiline
-	// Multiline comments should be permitted.
+	// Failed Lookup
+	// The empty string should be used when the named partial is not found.
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
-	d_string_append(source, "12345{{!\n  This is a\n  multi-line comment...\n}}67890\n");
+	d_string_append(source, "\"{{>text2}}\"");
 	magnum_populate_from_string(source, "{}", out, cwd);
-	CuAssertStrEquals(tc, "1234567890\n", out->str);
+	CuAssertStrEquals(tc, "\"\"", out->str);
 
-	// Standalone
-	// All standalone comment lines should be removed.
+	// Context
+	// The greater-than operator should operate within the current context.
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
-	d_string_append(source, "Begin.\n{{! Comment Block! }}\nEnd.\n");
-	magnum_populate_from_string(source, "{}", out, cwd);
-	CuAssertStrEquals(tc, "Begin.\nEnd.\n", out->str);
+	d_string_append(source, "\"{{>partial1}}\"");
+	magnum_populate_from_string(source, "{\"text\":\"content\"}", out, cwd);
+	CuAssertStrEquals(tc, "\"*content*\"", out->str);
 
-	// Indented Standalone
-	// All standalone comment lines should be removed.
+	// Recursion
+	// The greater-than operator should properly recurse.
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
-	d_string_append(source, "Begin.\n  {{! Indented Comment Block! }}\nEnd.\n");
+	d_string_append(source, "{{>node1}}");
+	magnum_populate_from_string(source, "{\"content\":\"X\",\"nodes\":[{\"content\":\"Y\",\"nodes\":[]}]}", out, cwd);
+	CuAssertStrEquals(tc, "X<Y<>>", out->str);
+
+	// Surrounding Whitespace
+	// The greater-than operator should not alter surrounding whitespace.
+	d_string_erase(source, 0, -1);
+	d_string_erase(out, 0, -1);
+	d_string_append(source, "| {{>partial2}} |");
 	magnum_populate_from_string(source, "{}", out, cwd);
-	CuAssertStrEquals(tc, "Begin.\nEnd.\n", out->str);
+	CuAssertStrEquals(tc, "| \t|\t |", out->str);
+
+	// Inline Indentation
+	// Whitespace should be left untouched.
+	d_string_erase(source, 0, -1);
+	d_string_erase(out, 0, -1);
+	d_string_append(source, "  {{data}}  {{> partial3}}\n");
+	magnum_populate_from_string(source, "{\"data\":\"|\"}", out, cwd);
+	CuAssertStrEquals(tc, "  |  >\n>\n", out->str);
 
 	// Standalone Line Endings
 	// "\r\n" should be considered a newline for standalone tags.
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
-	d_string_append(source, "|\r\n{{! Standalone Comment }}\r\n|");
+	d_string_append(source, "|\r\n{{>partial4}}\r\n|");
 	magnum_populate_from_string(source, "{}", out, cwd);
-	CuAssertStrEquals(tc, "|\r\n|", out->str);
+	CuAssertStrEquals(tc, "|\r\n>|", out->str);
 
 	// Standalone Without Previous Line
 	// Standalone tags should not require a newline to precede them.
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
-	d_string_append(source, "  {{! I'm Still Standalone }}\n!");
+	d_string_append(source, "  {{>partial5}}\n>");
 	magnum_populate_from_string(source, "{}", out, cwd);
-	CuAssertStrEquals(tc, "!", out->str);
+	CuAssertStrEquals(tc, "  >\n  >>", out->str);
 
 	// Standalone Without Newline
 	// Standalone tags should not require a newline to follow them.
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
-	d_string_append(source, "!\n  {{! I'm Still Standalone }}");
+	d_string_append(source, ">\n  {{>partial6}}");
 	magnum_populate_from_string(source, "{}", out, cwd);
-	CuAssertStrEquals(tc, "!\n", out->str);
+	CuAssertStrEquals(tc, ">\n  >\n  >", out->str);
 
-	// Multiline Standalone
-	// All standalone comment lines should be removed.
+	// Standalone Indentation
+	// Each line of the partial should be indented before rendering.
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
-	d_string_append(source, "Begin.\n{{!\nSomething's going on here...\n}}\nEnd.\n");
-	magnum_populate_from_string(source, "{}", out, cwd);
-	CuAssertStrEquals(tc, "Begin.\nEnd.\n", out->str);
+	d_string_append(source, "\\\n {{>partial7}}\n/\n");
+	magnum_populate_from_string(source, "{\"content\":\"<\\n->\"}", out, cwd);
+	CuAssertStrEquals(tc, "\\\n |\n &lt;\n-&gt;\n |\n/\n", out->str);
 
-	// Indented Multiline Standalone
-	// All standalone comment lines should be removed.
+	// Padding Whitespace
+	// Superfluous in-tag whitespace should be ignored.
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
-	d_string_append(source, "Begin.\n  {{!\n    Something's going on here...\n  }}\nEnd.\n");
-	magnum_populate_from_string(source, "{}", out, cwd);
-	CuAssertStrEquals(tc, "Begin.\nEnd.\n", out->str);
-
-	// Indented Inline
-	// Inline comments should not strip whitespace
-	d_string_erase(source, 0, -1);
-	d_string_erase(out, 0, -1);
-	d_string_append(source, "  12 {{! 34 }}\n");
-	magnum_populate_from_string(source, "{}", out, cwd);
-	CuAssertStrEquals(tc, "  12 \n", out->str);
-
-	// Surrounding Whitespace
-	// Comment removal should preserve surrounding whitespace.
-	d_string_erase(source, 0, -1);
-	d_string_erase(out, 0, -1);
-	d_string_append(source, "12345 {{! Comment Block! }} 67890");
-	magnum_populate_from_string(source, "{}", out, cwd);
-	CuAssertStrEquals(tc, "12345  67890", out->str);
+	d_string_append(source, "|{{> partial8 }}|");
+	magnum_populate_from_string(source, "{\"boolean\":true}", out, cwd);
+	CuAssertStrEquals(tc, "|[]|", out->str);
 
 	d_string_free(source, true);
 	d_string_free(out, true);

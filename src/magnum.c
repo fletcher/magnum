@@ -161,6 +161,33 @@ static JSON_Value * find(struct closure * c, const char * name) {
 }
 
 
+// Indent each line of partial
+void indent_text(DString * text, const char * indent, size_t indent_len) {
+	if (indent && indent_len) {
+		DString * replace = d_string_new("");
+		d_string_append_c_array(replace, indent, indent_len);
+
+		// Preserve Windows line endings
+		d_string_replace_text_in_range(text, 0, -1, "\r\n", "!!MAGNUMWINDOWSLINEENDING!!");
+
+		// Mac Classic line endings
+		d_string_prepend(replace, "\r");
+		d_string_replace_text_in_range(text, 0, -1, "\r", replace->str);
+
+		// Unix line endings
+		d_string_erase(replace, 0, 1);
+		d_string_prepend(replace, "\n");
+		d_string_replace_text_in_range(text, 0, -1, "\n", replace->str);
+
+		// Windows line endings
+		d_string_prepend(replace, "\r");
+		d_string_replace_text_in_range(text, 0, -1, "!!MAGNUMWINDOWSLINEENDING!!", replace->str);
+
+		d_string_free(replace, true);
+	}
+}
+
+
 // Load partial
 static int load_partial(char * name, DString * partial, struct closure * c, char ** search_directory) {
 	DString * load;
@@ -191,6 +218,8 @@ static int load_partial(char * name, DString * partial, struct closure * c, char
 	free(partial->str);
 	partial->str = load->str;
 	partial->currentStringLength = load->currentStringLength;
+
+	d_string_free(load, false);
 
 	return 0;
 }
@@ -437,6 +466,8 @@ static int parse(DString * source, const char * opener, const char * closer, str
 
 	DString * partial;
 	char * dir;
+	const char * indent;
+	size_t indent_len;
 
 	int standalone;
 
@@ -670,7 +701,22 @@ static int parse(DString * source, const char * opener, const char * closer, str
 				if (visible) {
 					partial = d_string_new("");
 					dir = my_strdup(search_directory);
+
 					rc = load_partial(key_name, partial, closure, &dir);
+
+					if (standalone) {
+						// Determine leading whitespace
+						indent = start;
+						indent_len = 0;
+
+						while ((indent > source->str) &&
+							((*(indent - 1) == ' ') || (*(indent - 1) == '\t'))) {
+							indent--;
+							indent_len++;
+						}
+
+						indent_text(partial, indent, indent_len);
+					}
 
 					if (rc == 0) {
 						rc = parse(partial, "{{", "}}", closure, dir);
@@ -678,10 +724,6 @@ static int parse(DString * source, const char * opener, const char * closer, str
 
 					free(dir);
 					d_string_free(partial, true);
-
-					if (rc < 0) {
-						return rc;
-					}
 				}
 
 				break;

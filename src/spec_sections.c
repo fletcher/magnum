@@ -41,8 +41,10 @@
 
 
 #include <ctype.h>
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "d_string.h"
 #include "libMagnum.h"
@@ -55,12 +57,19 @@ void Test_magnum_spec_sections(CuTest* tc) {
 	DString * source = d_string_new("");
 	DString * out = d_string_new("");
 
+	// Determine current directory
+	char cwd[PATH_MAX];
+	getcwd(cwd, sizeof(cwd));
+
+	// Shift to ../test/partials
+	strcat(cwd, "/../test/partials");
+
 	// Truthy
 	// Truthy sections should have their contents rendered.
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "\"{{#boolean}}This should be rendered.{{/boolean}}\"");
-	magnum_populate_from_string(source, "{\"boolean\":true}", out, NULL);
+	magnum_populate_from_string(source, "{\"boolean\":true}", out, cwd);
 	CuAssertStrEquals(tc, "\"This should be rendered.\"", out->str);
 
 	// Falsey
@@ -68,7 +77,7 @@ void Test_magnum_spec_sections(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "\"{{#boolean}}This should not be rendered.{{/boolean}}\"");
-	magnum_populate_from_string(source, "{\"boolean\":false}", out, NULL);
+	magnum_populate_from_string(source, "{\"boolean\":false}", out, cwd);
 	CuAssertStrEquals(tc, "\"\"", out->str);
 
 	// Context
@@ -76,7 +85,7 @@ void Test_magnum_spec_sections(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "\"{{#context}}Hi {{name}}.{{/context}}\"");
-	magnum_populate_from_string(source, "{\"context\":{\"name\":\"Joe\"}}", out, NULL);
+	magnum_populate_from_string(source, "{\"context\":{\"name\":\"Joe\"}}", out, cwd);
 	CuAssertStrEquals(tc, "\"Hi Joe.\"", out->str);
 
 	// Deeply Nested Contexts
@@ -84,7 +93,7 @@ void Test_magnum_spec_sections(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "{{#a}}\n{{one}}\n{{#b}}\n{{one}}{{two}}{{one}}\n{{#c}}\n{{one}}{{two}}{{three}}{{two}}{{one}}\n{{#d}}\n{{one}}{{two}}{{three}}{{four}}{{three}}{{two}}{{one}}\n{{#e}}\n{{one}}{{two}}{{three}}{{four}}{{five}}{{four}}{{three}}{{two}}{{one}}\n{{/e}}\n{{one}}{{two}}{{three}}{{four}}{{three}}{{two}}{{one}}\n{{/d}}\n{{one}}{{two}}{{three}}{{two}}{{one}}\n{{/c}}\n{{one}}{{two}}{{one}}\n{{/b}}\n{{one}}\n{{/a}}\n");
-	magnum_populate_from_string(source, "{\"a\":{\"one\":1},\"b\":{\"two\":2},\"c\":{\"three\":3},\"d\":{\"four\":4},\"e\":{\"five\":5}}", out, NULL);
+	magnum_populate_from_string(source, "{\"a\":{\"one\":1},\"b\":{\"two\":2},\"c\":{\"three\":3},\"d\":{\"four\":4},\"e\":{\"five\":5}}", out, cwd);
 	CuAssertStrEquals(tc, "1\n121\n12321\n1234321\n123454321\n1234321\n12321\n121\n1\n", out->str);
 
 	// List
@@ -92,7 +101,7 @@ void Test_magnum_spec_sections(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "\"{{#list}}{{item}}{{/list}}\"");
-	magnum_populate_from_string(source, "{\"list\":[{\"item\":1},{\"item\":2},{\"item\":3}]}", out, NULL);
+	magnum_populate_from_string(source, "{\"list\":[{\"item\":1},{\"item\":2},{\"item\":3}]}", out, cwd);
 	CuAssertStrEquals(tc, "\"123\"", out->str);
 
 	// Empty List
@@ -100,7 +109,7 @@ void Test_magnum_spec_sections(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "\"{{#list}}Yay lists!{{/list}}\"");
-	magnum_populate_from_string(source, "{\"list\":[]}", out, NULL);
+	magnum_populate_from_string(source, "{\"list\":[]}", out, cwd);
 	CuAssertStrEquals(tc, "\"\"", out->str);
 
 	// Doubled
@@ -108,7 +117,7 @@ void Test_magnum_spec_sections(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "{{#bool}}\n* first\n{{/bool}}\n* {{two}}\n{{#bool}}\n* third\n{{/bool}}\n");
-	magnum_populate_from_string(source, "{\"two\":\"second\",\"bool\":true}", out, NULL);
+	magnum_populate_from_string(source, "{\"two\":\"second\",\"bool\":true}", out, cwd);
 	CuAssertStrEquals(tc, "* first\n* second\n* third\n", out->str);
 
 	// Nested (Truthy)
@@ -116,7 +125,7 @@ void Test_magnum_spec_sections(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "| A {{#bool}}B {{#bool}}C{{/bool}} D{{/bool}} E |");
-	magnum_populate_from_string(source, "{\"bool\":true}", out, NULL);
+	magnum_populate_from_string(source, "{\"bool\":true}", out, cwd);
 	CuAssertStrEquals(tc, "| A B C D E |", out->str);
 
 	// Nested (Falsey)
@@ -124,7 +133,7 @@ void Test_magnum_spec_sections(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "| A {{#bool}}B {{#bool}}C{{/bool}} D{{/bool}} E |");
-	magnum_populate_from_string(source, "{\"bool\":false}", out, NULL);
+	magnum_populate_from_string(source, "{\"bool\":false}", out, cwd);
 	CuAssertStrEquals(tc, "| A  E |", out->str);
 
 	// Context Misses
@@ -132,7 +141,7 @@ void Test_magnum_spec_sections(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "[{{#missing}}Found key 'missing'!{{/missing}}]");
-	magnum_populate_from_string(source, "{}", out, NULL);
+	magnum_populate_from_string(source, "{}", out, cwd);
 	CuAssertStrEquals(tc, "[]", out->str);
 
 	// Implicit Iterator - String
@@ -140,7 +149,7 @@ void Test_magnum_spec_sections(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "\"{{#list}}({{.}}){{/list}}\"");
-	magnum_populate_from_string(source, "{\"list\":[\"a\",\"b\",\"c\",\"d\",\"e\"]}", out, NULL);
+	magnum_populate_from_string(source, "{\"list\":[\"a\",\"b\",\"c\",\"d\",\"e\"]}", out, cwd);
 	CuAssertStrEquals(tc, "\"(a)(b)(c)(d)(e)\"", out->str);
 
 	// Implicit Iterator - Integer
@@ -148,7 +157,7 @@ void Test_magnum_spec_sections(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "\"{{#list}}({{.}}){{/list}}\"");
-	magnum_populate_from_string(source, "{\"list\":[1,2,3,4,5]}", out, NULL);
+	magnum_populate_from_string(source, "{\"list\":[1,2,3,4,5]}", out, cwd);
 	CuAssertStrEquals(tc, "\"(1)(2)(3)(4)(5)\"", out->str);
 
 	// Implicit Iterator - Decimal
@@ -156,7 +165,7 @@ void Test_magnum_spec_sections(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "\"{{#list}}({{.}}){{/list}}\"");
-	magnum_populate_from_string(source, "{\"list\":[1.100000,2.200000,3.300000,4.400000,5.500000]}", out, NULL);
+	magnum_populate_from_string(source, "{\"list\":[1.100000,2.200000,3.300000,4.400000,5.500000]}", out, cwd);
 	CuAssertStrEquals(tc, "\"(1.1)(2.2)(3.3)(4.4)(5.5)\"", out->str);
 
 	// Implicit Iterator - Array
@@ -164,7 +173,7 @@ void Test_magnum_spec_sections(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "\"{{#list}}({{#.}}{{.}}{{/.}}){{/list}}\"");
-	magnum_populate_from_string(source, "{\"list\":[[1,2,3],[\"a\",\"b\",\"c\"]]}", out, NULL);
+	magnum_populate_from_string(source, "{\"list\":[[1,2,3],[\"a\",\"b\",\"c\"]]}", out, cwd);
 	CuAssertStrEquals(tc, "\"(123)(abc)\"", out->str);
 
 	// Dotted Names - Truthy
@@ -172,7 +181,7 @@ void Test_magnum_spec_sections(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "\"{{#a.b.c}}Here{{/a.b.c}}\" == \"Here\"");
-	magnum_populate_from_string(source, "{\"a\":{\"b\":{\"c\":true}}}", out, NULL);
+	magnum_populate_from_string(source, "{\"a\":{\"b\":{\"c\":true}}}", out, cwd);
 	CuAssertStrEquals(tc, "\"Here\" == \"Here\"", out->str);
 
 	// Dotted Names - Falsey
@@ -180,7 +189,7 @@ void Test_magnum_spec_sections(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "\"{{#a.b.c}}Here{{/a.b.c}}\" == \"\"");
-	magnum_populate_from_string(source, "{\"a\":{\"b\":{\"c\":false}}}", out, NULL);
+	magnum_populate_from_string(source, "{\"a\":{\"b\":{\"c\":false}}}", out, cwd);
 	CuAssertStrEquals(tc, "\"\" == \"\"", out->str);
 
 	// Dotted Names - Broken Chains
@@ -188,7 +197,7 @@ void Test_magnum_spec_sections(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "\"{{#a.b.c}}Here{{/a.b.c}}\" == \"\"");
-	magnum_populate_from_string(source, "{\"a\":{}}", out, NULL);
+	magnum_populate_from_string(source, "{\"a\":{}}", out, cwd);
 	CuAssertStrEquals(tc, "\"\" == \"\"", out->str);
 
 	// Surrounding Whitespace
@@ -196,7 +205,7 @@ void Test_magnum_spec_sections(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, " | {{#boolean}}\t|\t{{/boolean}} | \n");
-	magnum_populate_from_string(source, "{\"boolean\":true}", out, NULL);
+	magnum_populate_from_string(source, "{\"boolean\":true}", out, cwd);
 	CuAssertStrEquals(tc, " | \t|\t | \n", out->str);
 
 	// Internal Whitespace
@@ -204,7 +213,7 @@ void Test_magnum_spec_sections(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, " | {{#boolean}} {{! Important Whitespace }}\n {{/boolean}} | \n");
-	magnum_populate_from_string(source, "{\"boolean\":true}", out, NULL);
+	magnum_populate_from_string(source, "{\"boolean\":true}", out, cwd);
 	CuAssertStrEquals(tc, " |  \n  | \n", out->str);
 
 	// Indented Inline Sections
@@ -212,7 +221,7 @@ void Test_magnum_spec_sections(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, " {{#boolean}}YES{{/boolean}}\n {{#boolean}}GOOD{{/boolean}}\n");
-	magnum_populate_from_string(source, "{\"boolean\":true}", out, NULL);
+	magnum_populate_from_string(source, "{\"boolean\":true}", out, cwd);
 	CuAssertStrEquals(tc, " YES\n GOOD\n", out->str);
 
 	// Standalone Lines
@@ -220,7 +229,7 @@ void Test_magnum_spec_sections(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "| This Is\n{{#boolean}}\n|\n{{/boolean}}\n| A Line\n");
-	magnum_populate_from_string(source, "{\"boolean\":true}", out, NULL);
+	magnum_populate_from_string(source, "{\"boolean\":true}", out, cwd);
 	CuAssertStrEquals(tc, "| This Is\n|\n| A Line\n", out->str);
 
 	// Indented Standalone Lines
@@ -228,7 +237,7 @@ void Test_magnum_spec_sections(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "| This Is\n  {{#boolean}}\n|\n  {{/boolean}}\n| A Line\n");
-	magnum_populate_from_string(source, "{\"boolean\":true}", out, NULL);
+	magnum_populate_from_string(source, "{\"boolean\":true}", out, cwd);
 	CuAssertStrEquals(tc, "| This Is\n|\n| A Line\n", out->str);
 
 	// Standalone Line Endings
@@ -236,7 +245,7 @@ void Test_magnum_spec_sections(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "|\r\n{{#boolean}}\r\n{{/boolean}}\r\n|");
-	magnum_populate_from_string(source, "{\"boolean\":true}", out, NULL);
+	magnum_populate_from_string(source, "{\"boolean\":true}", out, cwd);
 	CuAssertStrEquals(tc, "|\r\n|", out->str);
 
 	// Standalone Without Previous Line
@@ -244,7 +253,7 @@ void Test_magnum_spec_sections(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "  {{#boolean}}\n#{{/boolean}}\n/");
-	magnum_populate_from_string(source, "{\"boolean\":true}", out, NULL);
+	magnum_populate_from_string(source, "{\"boolean\":true}", out, cwd);
 	CuAssertStrEquals(tc, "#\n/", out->str);
 
 	// Standalone Without Newline
@@ -252,7 +261,7 @@ void Test_magnum_spec_sections(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "#{{#boolean}}\n/\n  {{/boolean}}");
-	magnum_populate_from_string(source, "{\"boolean\":true}", out, NULL);
+	magnum_populate_from_string(source, "{\"boolean\":true}", out, cwd);
 	CuAssertStrEquals(tc, "#\n/\n", out->str);
 
 	// Padding
@@ -260,7 +269,7 @@ void Test_magnum_spec_sections(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "|{{# boolean }}={{/ boolean }}|");
-	magnum_populate_from_string(source, "{\"boolean\":true}", out, NULL);
+	magnum_populate_from_string(source, "{\"boolean\":true}", out, cwd);
 	CuAssertStrEquals(tc, "|=|", out->str);
 
 	d_string_free(source, true);
