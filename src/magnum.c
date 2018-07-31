@@ -362,6 +362,7 @@ static int json_enter(const char * name, struct closure * c) {
 				c->depth--;
 				return 0;
 			}
+
 			c->stack[c->depth].count = 1;
 			c->stack[c->depth].container = NULL;
 			c->stack[c->depth].val = v;
@@ -373,6 +374,7 @@ static int json_enter(const char * name, struct closure * c) {
 				c->depth--;
 				return 0;
 			}
+
 			c->stack[c->depth].count = 1;
 			c->stack[c->depth].container = NULL;
 			c->stack[c->depth].val = v;
