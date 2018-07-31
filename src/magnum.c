@@ -710,7 +710,7 @@ static int parse(DString * source, const char * opener, const char * closer, str
 						indent_len = 0;
 
 						while ((indent > source->str) &&
-							((*(indent - 1) == ' ') || (*(indent - 1) == '\t'))) {
+								((*(indent - 1) == ' ') || (*(indent - 1) == '\t'))) {
 							indent--;
 							indent_len++;
 						}
