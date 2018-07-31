@@ -122,7 +122,7 @@ through MultiMarkdown.
 **CAUTION:**  The Mustache syntax `{{foo}}` is the same as the MultiMarkdown
 syntax for transclusion.  Because the Mustache spec indicates that non-
 matching tags will be removed, running text through `magnum` will remove any
-transfusion tags from the MultiMarkdown text.  In this case, you should run
+transclusion tags from the MultiMarkdown text.  In this case, you should run
 the file through MultiMarkdown first in order to perform transclusion:
 
 	multimarkdown -t mmd text.mmd > text.mustache
