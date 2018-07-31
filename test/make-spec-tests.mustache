@@ -2,7 +2,7 @@
 
 	Magnum -- C implementation of Mustache logic-less templates
 
-	@file spec.c
+	@file spec_{{title}}.c
 
 	@brief Bootstrap test suite from https://github.com/mustache/spec
 
@@ -41,8 +41,10 @@
 
 
 #include <ctype.h>
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "d_string.h"
 #include "libMagnum.h"
@@ -55,13 +57,20 @@ void Test_magnum_spec_{{title}}(CuTest* tc) {
 	DString * source = d_string_new("");
 	DString * out = d_string_new("");
 
+	// Determine current directory
+	char cwd[PATH_MAX];
+	getcwd(cwd, sizeof(cwd));
+
+	// Shift to ../test/partials
+	strcat(cwd, "/../test/partials");
+
 {{#tests}}
 	// {{{name}}}
 	// {{{desc}}}
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "{{$template}}");
-	magnum_populate_from_string(source, "{{$data}}", out, NULL);
+	magnum_populate_from_string(source, "{{$data}}", out, cwd);
 	CuAssertStrEquals(tc, "{{$expected}}", out->str);
 
 {{/tests}}
