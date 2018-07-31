@@ -41,8 +41,10 @@
 
 
 #include <ctype.h>
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "d_string.h"
 #include "libMagnum.h"
@@ -55,12 +57,19 @@ void Test_magnum_spec_delimiters(CuTest* tc) {
 	DString * source = d_string_new("");
 	DString * out = d_string_new("");
 
+	// Determine current directory
+	char cwd[PATH_MAX];
+	getcwd(cwd, sizeof(cwd));
+
+	// Shift to ../test/partials
+	strcat(cwd, "/../test/partials");
+
 	// Pair Behavior
 	// The equals sign (used on both sides) should permit delimiter changes.
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "{{=<% %>=}}(<%text%>)");
-	magnum_populate_from_string(source, "{\"text\":\"Hey!\"}", out, NULL);
+	magnum_populate_from_string(source, "{\"text\":\"Hey!\"}", out, cwd);
 	CuAssertStrEquals(tc, "(Hey!)", out->str);
 
 	// Special Characters
@@ -68,7 +77,7 @@ void Test_magnum_spec_delimiters(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "({{=[ ]=}}[text])");
-	magnum_populate_from_string(source, "{\"text\":\"It worked!\"}", out, NULL);
+	magnum_populate_from_string(source, "{\"text\":\"It worked!\"}", out, cwd);
 	CuAssertStrEquals(tc, "(It worked!)", out->str);
 
 	// Sections
@@ -76,7 +85,7 @@ void Test_magnum_spec_delimiters(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "[\n{{#section}}\n  {{data}}\n  |data|\n{{/section}}\n\n{{= | | =}}\n|#section|\n  {{data}}\n  |data|\n|/section|\n]\n");
-	magnum_populate_from_string(source, "{\"section\":true,\"data\":\"I got interpolated.\"}", out, NULL);
+	magnum_populate_from_string(source, "{\"section\":true,\"data\":\"I got interpolated.\"}", out, cwd);
 	CuAssertStrEquals(tc, "[\n  I got interpolated.\n  |data|\n\n  {{data}}\n  I got interpolated.\n]\n", out->str);
 
 	// Inverted Sections
@@ -84,31 +93,31 @@ void Test_magnum_spec_delimiters(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "[\n{{^section}}\n  {{data}}\n  |data|\n{{/section}}\n\n{{= | | =}}\n|^section|\n  {{data}}\n  |data|\n|/section|\n]\n");
-	magnum_populate_from_string(source, "{\"section\":false,\"data\":\"I got interpolated.\"}", out, NULL);
+	magnum_populate_from_string(source, "{\"section\":false,\"data\":\"I got interpolated.\"}", out, cwd);
 	CuAssertStrEquals(tc, "[\n  I got interpolated.\n  |data|\n\n  {{data}}\n  I got interpolated.\n]\n", out->str);
 
 	// Partial Inheritence
 	// Delimiters set in a parent template should not affect a partial.
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
-	d_string_append(source, "[ {{>include}} ]\n{{= | | =}}\n[ |>include| ]\n");
-	magnum_populate_from_string(source, "{\"value\":\"yes\"}", out, NULL);
-//	CuAssertStrEquals(tc, "[ .yes. ]\n[ .yes. ]\n", out->str);
+	d_string_append(source, "[ {{>include1}} ]\n{{= | | =}}\n[ |>include1| ]\n");
+	magnum_populate_from_string(source, "{\"value\":\"yes\"}", out, cwd);
+	CuAssertStrEquals(tc, "[ .yes. ]\n[ .yes. ]\n", out->str);
 
 	// Post-Partial Behavior
 	// Delimiters set in a partial should not affect the parent template.
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
-	d_string_append(source, "[ {{>include}} ]\n[ .{{value}}.  .|value|. ]\n");
-	magnum_populate_from_string(source, "{\"value\":\"yes\"}", out, NULL);
-//	CuAssertStrEquals(tc, "[ .yes.  .yes. ]\n[ .yes.  .|value|. ]\n", out->str);
+	d_string_append(source, "[ {{>include2}} ]\n[ .{{value}}.  .|value|. ]\n");
+	magnum_populate_from_string(source, "{\"value\":\"yes\"}", out, cwd);
+	CuAssertStrEquals(tc, "[ .yes.  .yes. ]\n[ .yes.  .|value|. ]\n", out->str);
 
 	// Surrounding Whitespace
 	// Surrounding whitespace should be left untouched.
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "| {{=@ @=}} |");
-	magnum_populate_from_string(source, "{}", out, NULL);
+	magnum_populate_from_string(source, "{}", out, cwd);
 	CuAssertStrEquals(tc, "|  |", out->str);
 
 	// Outlying Whitespace (Inline)
@@ -116,7 +125,7 @@ void Test_magnum_spec_delimiters(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, " | {{=@ @=}}\n");
-	magnum_populate_from_string(source, "{}", out, NULL);
+	magnum_populate_from_string(source, "{}", out, cwd);
 	CuAssertStrEquals(tc, " | \n", out->str);
 
 	// Standalone Tag
@@ -124,7 +133,7 @@ void Test_magnum_spec_delimiters(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "Begin.\n{{=@ @=}}\nEnd.\n");
-	magnum_populate_from_string(source, "{}", out, NULL);
+	magnum_populate_from_string(source, "{}", out, cwd);
 	CuAssertStrEquals(tc, "Begin.\nEnd.\n", out->str);
 
 	// Indented Standalone Tag
@@ -132,7 +141,7 @@ void Test_magnum_spec_delimiters(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "Begin.\n  {{=@ @=}}\nEnd.\n");
-	magnum_populate_from_string(source, "{}", out, NULL);
+	magnum_populate_from_string(source, "{}", out, cwd);
 	CuAssertStrEquals(tc, "Begin.\nEnd.\n", out->str);
 
 	// Standalone Line Endings
@@ -140,7 +149,7 @@ void Test_magnum_spec_delimiters(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "|\r\n{{= @ @ =}}\r\n|");
-	magnum_populate_from_string(source, "{}", out, NULL);
+	magnum_populate_from_string(source, "{}", out, cwd);
 	CuAssertStrEquals(tc, "|\r\n|", out->str);
 
 	// Standalone Without Previous Line
@@ -148,7 +157,7 @@ void Test_magnum_spec_delimiters(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "  {{=@ @=}}\n=");
-	magnum_populate_from_string(source, "{}", out, NULL);
+	magnum_populate_from_string(source, "{}", out, cwd);
 	CuAssertStrEquals(tc, "=", out->str);
 
 	// Standalone Without Newline
@@ -156,7 +165,7 @@ void Test_magnum_spec_delimiters(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "=\n  {{=@ @=}}");
-	magnum_populate_from_string(source, "{}", out, NULL);
+	magnum_populate_from_string(source, "{}", out, cwd);
 	CuAssertStrEquals(tc, "=\n", out->str);
 
 	// Pair with Padding
@@ -164,7 +173,7 @@ void Test_magnum_spec_delimiters(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "|{{= @   @ =}}|");
-	magnum_populate_from_string(source, "{}", out, NULL);
+	magnum_populate_from_string(source, "{}", out, cwd);
 	CuAssertStrEquals(tc, "||", out->str);
 
 	d_string_free(source, true);

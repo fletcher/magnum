@@ -42,7 +42,7 @@
 			"value": "yes"
 		},
 		"expected": "[ .yes. ]\n[ .yes. ]\n",
-		"template": "[ {{>include}} ]\n{{= | | =}}\n[ |>include| ]\n",
+		"template": "[ {{>include1}} ]\n{{= | | =}}\n[ |>include1| ]\n",
 		"desc": "Delimiters set in a parent template should not affect a partial.",
 		"partials": {
 			"include": ".{{value}}."
@@ -53,7 +53,7 @@
 			"value": "yes"
 		},
 		"expected": "[ .yes.  .yes. ]\n[ .yes.  .|value|. ]\n",
-		"template": "[ {{>include}} ]\n[ .{{value}}.  .|value|. ]\n",
+		"template": "[ {{>include2}} ]\n[ .{{value}}.  .|value|. ]\n",
 		"desc": "Delimiters set in a partial should not affect the parent template.",
 		"partials": {
 			"include": ".{{value}}. {{= | | =}} .|value|."
