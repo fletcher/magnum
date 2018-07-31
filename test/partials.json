@@ -96,7 +96,7 @@
 		"data": {
 			"content": "<\\n->"
 		},
-		"expected": "\\\n |\n &lt;\n-&gt;\n |\n/\n",
+		"expected": "\\\n |\n <\n->\n |\n/\n",
 		"template": "\\\n {{>partial7}}\n/\n",
 		"desc": "Each line of the partial should be indented before rendering.",
 		"partials": {

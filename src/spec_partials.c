@@ -142,7 +142,7 @@ void Test_magnum_spec_partials(CuTest* tc) {
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "\\\n {{>partial7}}\n/\n");
 	magnum_populate_from_string(source, "{\"content\":\"<\\n->\"}", out, cwd);
-	CuAssertStrEquals(tc, "\\\n |\n &lt;\n-&gt;\n |\n/\n", out->str);
+	CuAssertStrEquals(tc, "\\\n |\n <\n->\n |\n/\n", out->str);
 
 	// Padding Whitespace
 	// Superfluous in-tag whitespace should be ignored.
