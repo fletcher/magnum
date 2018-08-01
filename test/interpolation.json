@@ -19,7 +19,7 @@
 	}, {
 		"name": "HTML Escaping",
 		"data": {
-			"forbidden": "& \" < >"
+			"forbidden": "& \\\" < >"
 		},
 		"expected": "These characters should be HTML escaped: &amp; &quot; &lt; &gt;\n",
 		"template": "These characters should be HTML escaped: {{forbidden}}\n",
@@ -27,7 +27,7 @@
 	}, {
 		"name": "Triple Mustache",
 		"data": {
-			"forbidden": "& \" < >"
+			"forbidden": "& \\\" < >"
 		},
 		"expected": "These characters should not be HTML escaped: & \" < >\n",
 		"template": "These characters should not be HTML escaped: {{{forbidden}}}\n",
@@ -35,7 +35,7 @@
 	}, {
 		"name": "Ampersand",
 		"data": {
-			"forbidden": "& \" < >"
+			"forbidden": "& \\\" < >"
 		},
 		"expected": "These characters should not be HTML escaped: & \" < >\n",
 		"template": "These characters should not be HTML escaped: {{&forbidden}}\n",

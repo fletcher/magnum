@@ -1,0 +1,27 @@
+{
+	"title" : "magnum",
+	"overview" : "Tests specific to magnum, as opposed to the general Mustache spec.",
+	"tests" : [
+		{
+			"name" : "Literal JSON",
+			"data" : {
+				"person" : {
+					"name" : "John Doe",
+					"age" : 35,
+					"title" : "King of the World"
+				}
+			},
+			"expected" : "{\\\"name\\\":\\\"John Doe\\\",\\\"age\\\":35,\\\"title\\\":\\\"King of the World\\\"}",
+			"template" : "{{$person}}",
+			"desc" : "'$' indicates that the template should should be replaced with the raw JSON."
+		}, {
+			"name" : "Escaped tag names",
+			"data" : {
+				">text" : "templated text"
+			},
+			"expected" : "templated text",
+			"template" : "{{:>text}}",
+			"desc" : "':' indicates that the rest of the tag name should be used literally."
+		}
+	]
+}

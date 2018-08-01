@@ -190,6 +190,11 @@ void indent_text(DString * text, const char * indent, size_t indent_len) {
 
 // Load partial
 static int load_partial(char * name, DString * partial, struct closure * c, char ** search_directory) {
+	// Require search_directory to enable partials
+	if (*search_directory == NULL) {
+		return;
+	}
+
 	DString * load;
 
 	// Check for partial from current directory

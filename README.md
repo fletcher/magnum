@@ -4,9 +4,9 @@
 | ----------	| -------------------------	|  
 | Title:	| Magnum	|  
 | Author:	| Fletcher T. Penney	|  
-| Date:	| 2018-07-31	|  
+| Date:	| 2018-08-01	|  
 | Copyright:	| Copyright © 2017-2018 Fletcher T. Penney.	|  
-| Version:	| 1.0.2	|  
+| Version:	| 1.1.0	|  
 
 
 ## Introduction ##
@@ -78,12 +78,12 @@ There are (currently) a few divergences from the formal Mustache
 specification:
 
 *	Since Magnum is written in C (and for security reasons), it does not support
-	lambdas
+	lambdas (an optional, not required, feature of Mustache.)
 
 *	Tags that start with `:` will treat the remainder of the tag as literal
 	characters -- this provides `escaping` when a tag name requires a character
 	that is otherwise used for the Mustache syntax.  This feature was developed
-	in `mustach`
+	in `mustach`.
 
 *   Tags that start with `$` will insert the raw JSON as a text string. This
 	is used in the `make_spec_test.must` file in order to generate the test
@@ -122,7 +122,7 @@ through MultiMarkdown.
 **CAUTION:**  The Mustache syntax `{{foo}}` is the same as the MultiMarkdown
 syntax for transclusion.  Because the Mustache spec indicates that non-
 matching tags will be removed, running text through `magnum` will remove any
-transfusion tags from the MultiMarkdown text.  In this case, you should run
+transclusion tags from the MultiMarkdown text.  In this case, you should run
 the file through MultiMarkdown first in order to perform transclusion:
 
 	multimarkdown -t mmd text.mmd > text.mustache
@@ -178,6 +178,18 @@ And generate this output:
 	* foo
 	* bar
 	* baz
+
+
+### What are the security implications of partials? ###
+
+Partials (`{{> foo.mustache}}`) allow arbitrary read access to the file
+system, IF the command line implementation is used, OR if a `search_directory`
+is passed to one of the `magnum_populate` commands.  `magnum` is limited to
+whatever system access privileges it is provided, so it cannot read anything
+that you could not access via the command line already.
+
+So the key thing is that if you are using `libMagnum` somewhere, pass NULL as
+the `search_directory` parameter to prevent partials from being enabled.
 
 
 ## License ##
