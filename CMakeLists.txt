@@ -8,14 +8,14 @@ cmake_minimum_required (VERSION 2.6)
 set (My_Project_Title "Magnum")
 set (My_Project_Description "C implementation of Mustache logic-less templates")
 set (My_Project_Author "Fletcher T. Penney")
-set (My_Project_Revised_Date "2017-11-12")
+set (My_Project_Revised_Date "2018-08-01")
 set (My_Project_Version_Major 1)
-set (My_Project_Version_Minor 0)
+set (My_Project_Version_Minor 1)
 set (My_Project_Version_Patch 0)
 
 set (My_Project_Version "${My_Project_Version_Major}.${My_Project_Version_Minor}.${My_Project_Version_Patch}")
 
-set (My_Project_Copyright_Date "2017")
+set (My_Project_Copyright_Date "2017-2018")
 set (My_Project_Copyright "Copyright © ${My_Project_Copyright_Date} ${My_Project_Author}.")
 
 string(TOUPPER ${My_Project_Title} My_Project_Title_Caps  )
@@ -214,6 +214,8 @@ else()
 		src/spec_delimiters.c
 		src/spec_interpolation.c
 		src/spec_inverted.c
+		src/spec_magnum.c
+		src/spec_partials.c
 		src/spec_sections.c
 		test/CuTest.c
 		test/CuTest.h

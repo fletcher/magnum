@@ -2,7 +2,35 @@
 
 	Magnum -- C implementation of Mustache logic-less templates
 
-	@file spec.c
+	@file spec_interpolation.c
+
+	Interpolation tags are used to integrate dynamic content into the template.
+
+The tag's content MUST be a non-whitespace character sequence NOT containing
+the current closing delimiter.
+
+This tag's content names the data to replace the tag.  A single period (`.`)
+indicates that the item currently sitting atop the context stack should be
+used; otherwise, name resolution is as follows:
+  1) Split the name on periods; the first part is the name to resolve, any
+  remaining parts should be retained.
+  2) Walk the context stack from top to bottom, finding the first context
+  that is a) a hash containing the name as a key OR b) an object responding
+  to a method with the given name.
+  3) If the context is a hash, the data is the value associated with the
+  name.
+  4) If the context is an object, the data is the value returned by the
+  method with the given name.
+  5) If any name parts were retained in step 1, each should be resolved
+  against a context stack containing only the result from the former
+  resolution.  If any part fails resolution, the result should be considered
+  falsey, and should interpolate as the empty string.
+Data should be coerced into a string (and escaped, if appropriate) before
+interpolation.
+
+The Interpolation tags MUST NOT be treated as standalone.
+
+
 
 	@brief Bootstrap test suite from https://github.com/mustache/spec
 
@@ -15,7 +43,7 @@
 
 /*
 
-	Original Code Copyright © 2017 Fletcher T. Penney.
+	Original Code Copyright © 2017-2018 Fletcher T. Penney.
 
 	## The MIT License ##
 
@@ -41,8 +69,10 @@
 
 
 #include <ctype.h>
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "d_string.h"
 #include "libMagnum.h"
@@ -55,12 +85,19 @@ void Test_magnum_spec_interpolation(CuTest* tc) {
 	DString * source = d_string_new("");
 	DString * out = d_string_new("");
 
+	// Determine current directory
+	char cwd[PATH_MAX];
+	getcwd(cwd, sizeof(cwd));
+
+	// Shift to ../test/partials
+	strcat(cwd, "/../test/partials");
+
 	// No Interpolation
 	// Mustache-free templates should render as-is.
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "Hello from {Mustache}!\n");
-	magnum_populate_from_string(source, "{}", out, NULL);
+	magnum_populate_from_string(source, "{}", out, cwd);
 	CuAssertStrEquals(tc, "Hello from {Mustache}!\n", out->str);
 
 	// Basic Interpolation
@@ -68,7 +105,7 @@ void Test_magnum_spec_interpolation(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "Hello, {{subject}}!\n");
-	magnum_populate_from_string(source, "{\"subject\":\"world\"}", out, NULL);
+	magnum_populate_from_string(source, "{\"subject\":\"world\"}", out, cwd);
 	CuAssertStrEquals(tc, "Hello, world!\n", out->str);
 
 	// HTML Escaping
@@ -76,7 +113,7 @@ void Test_magnum_spec_interpolation(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "These characters should be HTML escaped: {{forbidden}}\n");
-	magnum_populate_from_string(source, "{\"forbidden\":\"& \\\" < >\"}", out, NULL);
+	magnum_populate_from_string(source, "{\"forbidden\":\"& \\\" < >\"}", out, cwd);
 	CuAssertStrEquals(tc, "These characters should be HTML escaped: &amp; &quot; &lt; &gt;\n", out->str);
 
 	// Triple Mustache
@@ -84,7 +121,7 @@ void Test_magnum_spec_interpolation(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "These characters should not be HTML escaped: {{{forbidden}}}\n");
-	magnum_populate_from_string(source, "{\"forbidden\":\"& \\\" < >\"}", out, NULL);
+	magnum_populate_from_string(source, "{\"forbidden\":\"& \\\" < >\"}", out, cwd);
 	CuAssertStrEquals(tc, "These characters should not be HTML escaped: & \" < >\n", out->str);
 
 	// Ampersand
@@ -92,7 +129,7 @@ void Test_magnum_spec_interpolation(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "These characters should not be HTML escaped: {{&forbidden}}\n");
-	magnum_populate_from_string(source, "{\"forbidden\":\"& \\\" < >\"}", out, NULL);
+	magnum_populate_from_string(source, "{\"forbidden\":\"& \\\" < >\"}", out, cwd);
 	CuAssertStrEquals(tc, "These characters should not be HTML escaped: & \" < >\n", out->str);
 
 	// Basic Integer Interpolation
@@ -100,7 +137,7 @@ void Test_magnum_spec_interpolation(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "\"{{mph}} miles an hour!\"");
-	magnum_populate_from_string(source, "{\"mph\":85}", out, NULL);
+	magnum_populate_from_string(source, "{\"mph\":85}", out, cwd);
 	CuAssertStrEquals(tc, "\"85 miles an hour!\"", out->str);
 
 	// Triple Mustache Integer Interpolation
@@ -108,7 +145,7 @@ void Test_magnum_spec_interpolation(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "\"{{{mph}}} miles an hour!\"");
-	magnum_populate_from_string(source, "{\"mph\":85}", out, NULL);
+	magnum_populate_from_string(source, "{\"mph\":85}", out, cwd);
 	CuAssertStrEquals(tc, "\"85 miles an hour!\"", out->str);
 
 	// Ampersand Integer Interpolation
@@ -116,7 +153,7 @@ void Test_magnum_spec_interpolation(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "\"{{&mph}} miles an hour!\"");
-	magnum_populate_from_string(source, "{\"mph\":85}", out, NULL);
+	magnum_populate_from_string(source, "{\"mph\":85}", out, cwd);
 	CuAssertStrEquals(tc, "\"85 miles an hour!\"", out->str);
 
 	// Basic Decimal Interpolation
@@ -124,7 +161,7 @@ void Test_magnum_spec_interpolation(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "\"{{power}} jiggawatts!\"");
-	magnum_populate_from_string(source, "{\"power\":1.210000}", out, NULL);
+	magnum_populate_from_string(source, "{\"power\":1.210000}", out, cwd);
 	CuAssertStrEquals(tc, "\"1.21 jiggawatts!\"", out->str);
 
 	// Triple Mustache Decimal Interpolation
@@ -132,7 +169,7 @@ void Test_magnum_spec_interpolation(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "\"{{{power}}} jiggawatts!\"");
-	magnum_populate_from_string(source, "{\"power\":1.210000}", out, NULL);
+	magnum_populate_from_string(source, "{\"power\":1.210000}", out, cwd);
 	CuAssertStrEquals(tc, "\"1.21 jiggawatts!\"", out->str);
 
 	// Ampersand Decimal Interpolation
@@ -140,7 +177,7 @@ void Test_magnum_spec_interpolation(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "\"{{&power}} jiggawatts!\"");
-	magnum_populate_from_string(source, "{\"power\":1.210000}", out, NULL);
+	magnum_populate_from_string(source, "{\"power\":1.210000}", out, cwd);
 	CuAssertStrEquals(tc, "\"1.21 jiggawatts!\"", out->str);
 
 	// Basic Context Miss Interpolation
@@ -148,7 +185,7 @@ void Test_magnum_spec_interpolation(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "I ({{cannot}}) be seen!");
-	magnum_populate_from_string(source, "{}", out, NULL);
+	magnum_populate_from_string(source, "{}", out, cwd);
 	CuAssertStrEquals(tc, "I () be seen!", out->str);
 
 	// Triple Mustache Context Miss Interpolation
@@ -156,7 +193,7 @@ void Test_magnum_spec_interpolation(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "I ({{{cannot}}}) be seen!");
-	magnum_populate_from_string(source, "{}", out, NULL);
+	magnum_populate_from_string(source, "{}", out, cwd);
 	CuAssertStrEquals(tc, "I () be seen!", out->str);
 
 	// Ampersand Context Miss Interpolation
@@ -164,7 +201,7 @@ void Test_magnum_spec_interpolation(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "I ({{&cannot}}) be seen!");
-	magnum_populate_from_string(source, "{}", out, NULL);
+	magnum_populate_from_string(source, "{}", out, cwd);
 	CuAssertStrEquals(tc, "I () be seen!", out->str);
 
 	// Dotted Names - Basic Interpolation
@@ -172,7 +209,7 @@ void Test_magnum_spec_interpolation(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "\"{{person.name}}\" == \"{{#person}}{{name}}{{/person}}\"");
-	magnum_populate_from_string(source, "{\"person\":{\"name\":\"Joe\"}}", out, NULL);
+	magnum_populate_from_string(source, "{\"person\":{\"name\":\"Joe\"}}", out, cwd);
 	CuAssertStrEquals(tc, "\"Joe\" == \"Joe\"", out->str);
 
 	// Dotted Names - Triple Mustache Interpolation
@@ -180,7 +217,7 @@ void Test_magnum_spec_interpolation(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "\"{{{person.name}}}\" == \"{{#person}}{{{name}}}{{/person}}\"");
-	magnum_populate_from_string(source, "{\"person\":{\"name\":\"Joe\"}}", out, NULL);
+	magnum_populate_from_string(source, "{\"person\":{\"name\":\"Joe\"}}", out, cwd);
 	CuAssertStrEquals(tc, "\"Joe\" == \"Joe\"", out->str);
 
 	// Dotted Names - Ampersand Interpolation
@@ -188,7 +225,7 @@ void Test_magnum_spec_interpolation(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "\"{{&person.name}}\" == \"{{#person}}{{&name}}{{/person}}\"");
-	magnum_populate_from_string(source, "{\"person\":{\"name\":\"Joe\"}}", out, NULL);
+	magnum_populate_from_string(source, "{\"person\":{\"name\":\"Joe\"}}", out, cwd);
 	CuAssertStrEquals(tc, "\"Joe\" == \"Joe\"", out->str);
 
 	// Dotted Names - Arbitrary Depth
@@ -196,7 +233,7 @@ void Test_magnum_spec_interpolation(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "\"{{a.b.c.d.e.name}}\" == \"Phil\"");
-	magnum_populate_from_string(source, "{\"a\":{\"b\":{\"c\":{\"d\":{\"e\":{\"name\":\"Phil\"}}}}}}", out, NULL);
+	magnum_populate_from_string(source, "{\"a\":{\"b\":{\"c\":{\"d\":{\"e\":{\"name\":\"Phil\"}}}}}}", out, cwd);
 	CuAssertStrEquals(tc, "\"Phil\" == \"Phil\"", out->str);
 
 	// Dotted Names - Broken Chains
@@ -204,7 +241,7 @@ void Test_magnum_spec_interpolation(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "\"{{a.b.c}}\" == \"\"");
-	magnum_populate_from_string(source, "{\"a\":{}}", out, NULL);
+	magnum_populate_from_string(source, "{\"a\":{}}", out, cwd);
 	CuAssertStrEquals(tc, "\"\" == \"\"", out->str);
 
 	// Dotted Names - Broken Chain Resolution
@@ -212,7 +249,7 @@ void Test_magnum_spec_interpolation(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "\"{{a.b.c.name}}\" == \"\"");
-	magnum_populate_from_string(source, "{\"a\":{\"b\":{}},\"c\":{\"name\":\"Jim\"}}", out, NULL);
+	magnum_populate_from_string(source, "{\"a\":{\"b\":{}},\"c\":{\"name\":\"Jim\"}}", out, cwd);
 	CuAssertStrEquals(tc, "\"\" == \"\"", out->str);
 
 	// Dotted Names - Initial Resolution
@@ -220,7 +257,7 @@ void Test_magnum_spec_interpolation(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "\"{{#a}}{{b.c.d.e.name}}{{/a}}\" == \"Phil\"");
-	magnum_populate_from_string(source, "{\"a\":{\"b\":{\"c\":{\"d\":{\"e\":{\"name\":\"Phil\"}}}}},\"b\":{\"c\":{\"d\":{\"e\":{\"name\":\"Wrong\"}}}}}", out, NULL);
+	magnum_populate_from_string(source, "{\"a\":{\"b\":{\"c\":{\"d\":{\"e\":{\"name\":\"Phil\"}}}}},\"b\":{\"c\":{\"d\":{\"e\":{\"name\":\"Wrong\"}}}}}", out, cwd);
 	CuAssertStrEquals(tc, "\"Phil\" == \"Phil\"", out->str);
 
 	// Interpolation - Surrounding Whitespace
@@ -228,7 +265,7 @@ void Test_magnum_spec_interpolation(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "| {{string}} |");
-	magnum_populate_from_string(source, "{\"string\":\"---\"}", out, NULL);
+	magnum_populate_from_string(source, "{\"string\":\"---\"}", out, cwd);
 	CuAssertStrEquals(tc, "| --- |", out->str);
 
 	// Triple Mustache - Surrounding Whitespace
@@ -236,7 +273,7 @@ void Test_magnum_spec_interpolation(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "| {{{string}}} |");
-	magnum_populate_from_string(source, "{\"string\":\"---\"}", out, NULL);
+	magnum_populate_from_string(source, "{\"string\":\"---\"}", out, cwd);
 	CuAssertStrEquals(tc, "| --- |", out->str);
 
 	// Ampersand - Surrounding Whitespace
@@ -244,7 +281,7 @@ void Test_magnum_spec_interpolation(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "| {{&string}} |");
-	magnum_populate_from_string(source, "{\"string\":\"---\"}", out, NULL);
+	magnum_populate_from_string(source, "{\"string\":\"---\"}", out, cwd);
 	CuAssertStrEquals(tc, "| --- |", out->str);
 
 	// Interpolation - Standalone
@@ -252,7 +289,7 @@ void Test_magnum_spec_interpolation(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "  {{string}}\n");
-	magnum_populate_from_string(source, "{\"string\":\"---\"}", out, NULL);
+	magnum_populate_from_string(source, "{\"string\":\"---\"}", out, cwd);
 	CuAssertStrEquals(tc, "  ---\n", out->str);
 
 	// Triple Mustache - Standalone
@@ -260,7 +297,7 @@ void Test_magnum_spec_interpolation(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "  {{{string}}}\n");
-	magnum_populate_from_string(source, "{\"string\":\"---\"}", out, NULL);
+	magnum_populate_from_string(source, "{\"string\":\"---\"}", out, cwd);
 	CuAssertStrEquals(tc, "  ---\n", out->str);
 
 	// Ampersand - Standalone
@@ -268,7 +305,7 @@ void Test_magnum_spec_interpolation(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "  {{&string}}\n");
-	magnum_populate_from_string(source, "{\"string\":\"---\"}", out, NULL);
+	magnum_populate_from_string(source, "{\"string\":\"---\"}", out, cwd);
 	CuAssertStrEquals(tc, "  ---\n", out->str);
 
 	// Interpolation With Padding
@@ -276,7 +313,7 @@ void Test_magnum_spec_interpolation(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "|{{ string }}|");
-	magnum_populate_from_string(source, "{\"string\":\"---\"}", out, NULL);
+	magnum_populate_from_string(source, "{\"string\":\"---\"}", out, cwd);
 	CuAssertStrEquals(tc, "|---|", out->str);
 
 	// Triple Mustache With Padding
@@ -284,7 +321,7 @@ void Test_magnum_spec_interpolation(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "|{{{ string }}}|");
-	magnum_populate_from_string(source, "{\"string\":\"---\"}", out, NULL);
+	magnum_populate_from_string(source, "{\"string\":\"---\"}", out, cwd);
 	CuAssertStrEquals(tc, "|---|", out->str);
 
 	// Ampersand With Padding
@@ -292,7 +329,7 @@ void Test_magnum_spec_interpolation(CuTest* tc) {
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
 	d_string_append(source, "|{{& string }}|");
-	magnum_populate_from_string(source, "{\"string\":\"---\"}", out, NULL);
+	magnum_populate_from_string(source, "{\"string\":\"---\"}", out, cwd);
 	CuAssertStrEquals(tc, "|---|", out->str);
 
 	d_string_free(source, true);

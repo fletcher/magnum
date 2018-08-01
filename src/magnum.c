@@ -15,7 +15,7 @@
 
 /*
 
-	Copyright © 2017 Fletcher T. Penney.
+	Copyright © 2017-2018 Fletcher T. Penney.
 
 	The `magnum` project is released under the MIT License.
 
@@ -124,7 +124,7 @@ static char * my_strdup(const char * source) {
 
 
 // Resolve `name` to find the proper value
-JSON_Value * find(struct closure * c, const char * name) {
+static JSON_Value * find(struct closure * c, const char * name) {
 	JSON_Object * o;
 	JSON_Value * v = NULL;
 	int i;
@@ -161,8 +161,40 @@ JSON_Value * find(struct closure * c, const char * name) {
 }
 
 
+// Indent each line of partial
+void indent_text(DString * text, const char * indent, size_t indent_len) {
+	if (indent && indent_len) {
+		DString * replace = d_string_new("");
+		d_string_append_c_array(replace, indent, indent_len);
+
+		// Preserve Windows line endings
+		d_string_replace_text_in_range(text, 0, -1, "\r\n", "!!MAGNUMWINDOWSLINEENDING!!");
+
+		// Mac Classic line endings
+		d_string_prepend(replace, "\r");
+		d_string_replace_text_in_range(text, 0, -1, "\r", replace->str);
+
+		// Unix line endings
+		d_string_erase(replace, 0, 1);
+		d_string_prepend(replace, "\n");
+		d_string_replace_text_in_range(text, 0, -1, "\n", replace->str);
+
+		// Windows line endings
+		d_string_prepend(replace, "\r");
+		d_string_replace_text_in_range(text, 0, -1, "!!MAGNUMWINDOWSLINEENDING!!", replace->str);
+
+		d_string_free(replace, true);
+	}
+}
+
+
 // Load partial
 static int load_partial(char * name, DString * partial, struct closure * c, char ** search_directory) {
+	// Require search_directory to enable partials
+	if (*search_directory == NULL) {
+		return;
+	}
+
 	DString * load;
 
 	// Check for partial from current directory
@@ -191,6 +223,8 @@ static int load_partial(char * name, DString * partial, struct closure * c, char
 	free(partial->str);
 	partial->str = load->str;
 	partial->currentStringLength = load->currentStringLength;
+
+	d_string_free(load, false);
 
 	return 0;
 }
@@ -363,6 +397,25 @@ static int json_enter(const char * name, struct closure * c) {
 				return 0;
 			}
 
+			c->stack[c->depth].count = 1;
+			c->stack[c->depth].container = NULL;
+			c->stack[c->depth].val = v;
+			c->stack[c->depth].index = 0;
+			break;
+
+		case JSONNumber:
+			if (!json_value_get_number(v)) {
+				c->depth--;
+				return 0;
+			}
+
+			c->stack[c->depth].count = 1;
+			c->stack[c->depth].container = NULL;
+			c->stack[c->depth].val = v;
+			c->stack[c->depth].index = 0;
+			break;
+
+		case JSONString:
 		case JSONObject:
 			c->stack[c->depth].count = 1;
 			c->stack[c->depth].container = NULL;
@@ -418,6 +471,8 @@ static int parse(DString * source, const char * opener, const char * closer, str
 
 	DString * partial;
 	char * dir;
+	const char * indent;
+	size_t indent_len;
 
 	int standalone;
 
@@ -651,7 +706,22 @@ static int parse(DString * source, const char * opener, const char * closer, str
 				if (visible) {
 					partial = d_string_new("");
 					dir = my_strdup(search_directory);
+
 					rc = load_partial(key_name, partial, closure, &dir);
+
+					if (standalone) {
+						// Determine leading whitespace
+						indent = start;
+						indent_len = 0;
+
+						while ((indent > source->str) &&
+								((*(indent - 1) == ' ') || (*(indent - 1) == '\t'))) {
+							indent--;
+							indent_len++;
+						}
+
+						indent_text(partial, indent, indent_len);
+					}
 
 					if (rc == 0) {
 						rc = parse(partial, "{{", "}}", closure, dir);
@@ -659,10 +729,6 @@ static int parse(DString * source, const char * opener, const char * closer, str
 
 					free(dir);
 					d_string_free(partial, true);
-
-					if (rc < 0) {
-						return rc;
-					}
 				}
 
 				break;
@@ -781,6 +847,30 @@ int magnum_populate_from_file(DString * source, const char * fname, DString * ou
 }
 
 
+/// Simplified method to allow use without any other included files.
+/// Useful if you have no other need for parson or d_string
+int magnum_populate_char_only(const char * source, const char * string, char ** out, const char * search_directory) {
+	JSON_Value * v = json_parse_string(string);
+
+	DString * d_source = d_string_new("");
+	free(d_source->str);
+	d_source->str = (char *) source;
+
+	DString * temp = d_string_new("");
+
+	int rc = magnum_populate_from_json(d_source, v, temp, search_directory);
+
+	json_value_free(v);
+
+	*out = temp->str;
+	d_string_free(temp, false);
+
+	d_string_free(d_source, false);
+
+	return rc;
+}
+
+
 #ifdef TEST
 void Test_magnum(CuTest* tc) {
 	DString * source = d_string_new("");
@@ -842,6 +932,34 @@ void Test_magnum(CuTest* tc) {
 	d_string_append(source, "* {{default_tags}}\n{{=<% %>=}}\n* <% erb_style_tags %>\n<%={{ }}=%>\n* {{ default_tags_again }}");
 	magnum_populate_from_string(source, "{}", out, NULL);
 	CuAssertStrEquals(tc, "* \n* \n* ", out->str);
+
+
+	// Section for number
+	d_string_erase(source, 0, -1);
+	d_string_erase(out, 0, -1);
+	d_string_append(source, "{{#value}}The value is {{value}}{{/value}}");
+	magnum_populate_from_string(source, "{ \"value\" : 50 }", out, NULL);
+	CuAssertStrEquals(tc, "The value is 50", out->str);
+
+	d_string_erase(out, 0, -1);
+	magnum_populate_from_string(source, "{ \"value\" : 0.0 }", out, NULL);
+	CuAssertStrEquals(tc, "", out->str);
+
+
+	// Section for string
+	d_string_erase(source, 0, -1);
+	d_string_erase(out, 0, -1);
+	d_string_append(source, "{{#value}}The value is {{value}}{{/value}}");
+	magnum_populate_from_string(source, "{ \"value\" : \"50\" }", out, NULL);
+	CuAssertStrEquals(tc, "The value is 50", out->str);
+
+	d_string_erase(out, 0, -1);
+	magnum_populate_from_string(source, "{ \"value\" : \"\" }", out, NULL);
+	CuAssertStrEquals(tc, "The value is ", out->str);
+
+	d_string_erase(out, 0, -1);
+	magnum_populate_from_string(source, "{  }", out, NULL);
+	CuAssertStrEquals(tc, "", out->str);
 
 
 	d_string_free(source, true);
