@@ -189,7 +189,8 @@ whatever system access privileges it is provided, so it cannot read anything
 that you could not access via the command line already.
 
 So the key thing is that if you are using `libMagnum` somewhere, pass NULL as
-the `search_directory` parameter to prevent partials from being enabled.
+the `search_directory` parameter to prevent partials from being enabled, if
+that is the behavior you desire.
 
 
 ## License ##
