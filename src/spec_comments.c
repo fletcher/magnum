@@ -4,6 +4,16 @@
 
 	@file spec_comments.c
 
+	Comment tags represent content that should never appear in the resulting
+output.
+
+The tag's content may contain any substring (including newlines) EXCEPT the
+closing delimiter.
+
+Comment tags SHOULD be treated as standalone when appropriate.
+
+
+
 	@brief Bootstrap test suite from https://github.com/mustache/spec
 
 

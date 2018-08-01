@@ -4,6 +4,17 @@
 
 	@file spec_delimiters.c
 
+	Set Delimiter tags are used to change the tag delimiters for all content
+following the tag in the current compilation unit.
+
+The tag's content MUST be any two non-whitespace sequences (separated by
+whitespace) EXCEPT an equals sign ('=') followed by the current closing
+delimiter.
+
+Set Delimiter tags SHOULD be treated as standalone when appropriate.
+
+
+
 	@brief Bootstrap test suite from https://github.com/mustache/spec
 
 

@@ -2,9 +2,9 @@
 
 	Magnum -- C implementation of Mustache logic-less templates
 
-	@file spec_{{title}}.c
+	@file spec_magnum.c
 
-	{{overview}}
+	Tests specific to magnum, as opposed to the general Mustache spec.
 
 
 	@brief Bootstrap test suite from https://github.com/mustache/spec
@@ -56,7 +56,7 @@
 #ifdef TEST
 #include "CuTest.h"
 
-void Test_magnum_spec_{{title}}(CuTest* tc) {
+void Test_magnum_spec_magnum(CuTest* tc) {
 	DString * source = d_string_new("");
 	DString * out = d_string_new("");
 
@@ -67,16 +67,22 @@ void Test_magnum_spec_{{title}}(CuTest* tc) {
 	// Shift to ../test/partials
 	strcat(cwd, "/../test/partials");
 
-{{#tests}}
-	// {{{name}}}
-	// {{{desc}}}
+	// Literal JSON
+	// '$' indicates that the template should should be replaced with the raw JSON.
 	d_string_erase(source, 0, -1);
 	d_string_erase(out, 0, -1);
-	d_string_append(source, "{{$template}}");
-	magnum_populate_from_string(source, "{{$data}}", out, cwd);
-	CuAssertStrEquals(tc, "{{$expected}}", out->str);
+	d_string_append(source, "{{$person}}");
+	magnum_populate_from_string(source, "{\"person\":{\"name\":\"John Doe\",\"age\":35,\"title\":\"King of the World\"}}", out, cwd);
+	CuAssertStrEquals(tc, "{\\\"name\\\":\\\"John Doe\\\",\\\"age\\\":35,\\\"title\\\":\\\"King of the World\\\"}", out->str);
 
-{{/tests}}
+	// Escaped tag names
+	// ':' indicates that the rest of the tag name should be used literally.
+	d_string_erase(source, 0, -1);
+	d_string_erase(out, 0, -1);
+	d_string_append(source, "{{:>text}}");
+	magnum_populate_from_string(source, "{\">text\":\"templated text\"}", out, cwd);
+	CuAssertStrEquals(tc, "templated text", out->str);
+
 	d_string_free(source, true);
 	d_string_free(out, true);
 }

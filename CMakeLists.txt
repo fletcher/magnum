@@ -214,6 +214,7 @@ else()
 		src/spec_delimiters.c
 		src/spec_interpolation.c
 		src/spec_inverted.c
+		src/spec_magnum.c
 		src/spec_partials.c
 		src/spec_sections.c
 		test/CuTest.c

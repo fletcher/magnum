@@ -4,6 +4,43 @@
 
 	@file spec_inverted.c
 
+	Inverted Section tags and End Section tags are used in combination to wrap a
+section of the template.
+
+These tags' content MUST be a non-whitespace character sequence NOT
+containing the current closing delimiter; each Inverted Section tag MUST be
+followed by an End Section tag with the same content within the same
+section.
+
+This tag's content names the data to replace the tag.  Name resolution is as
+follows:
+  1) Split the name on periods; the first part is the name to resolve, any
+  remaining parts should be retained.
+  2) Walk the context stack from top to bottom, finding the first context
+  that is a) a hash containing the name as a key OR b) an object responding
+  to a method with the given name.
+  3) If the context is a hash, the data is the value associated with the
+  name.
+  4) If the context is an object and the method with the given name has an
+  arity of 1, the method SHOULD be called with a String containing the
+  unprocessed contents of the sections; the data is the value returned.
+  5) Otherwise, the data is the value returned by calling the method with
+  the given name.
+  6) If any name parts were retained in step 1, each should be resolved
+  against a context stack containing only the result from the former
+  resolution.  If any part fails resolution, the result should be considered
+  falsey, and should interpolate as the empty string.
+If the data is not of a list type, it is coerced into a list as follows: if
+the data is truthy (e.g. `!!data == true`), use a single-element list
+containing the data, otherwise use an empty list.
+
+This section MUST NOT be rendered unless the data list is empty.
+
+Inverted Section and End Section tags SHOULD be treated as standalone when
+appropriate.
+
+
+
 	@brief Bootstrap test suite from https://github.com/mustache/spec
 
 

@@ -4,6 +4,34 @@
 
 	@file spec_interpolation.c
 
+	Interpolation tags are used to integrate dynamic content into the template.
+
+The tag's content MUST be a non-whitespace character sequence NOT containing
+the current closing delimiter.
+
+This tag's content names the data to replace the tag.  A single period (`.`)
+indicates that the item currently sitting atop the context stack should be
+used; otherwise, name resolution is as follows:
+  1) Split the name on periods; the first part is the name to resolve, any
+  remaining parts should be retained.
+  2) Walk the context stack from top to bottom, finding the first context
+  that is a) a hash containing the name as a key OR b) an object responding
+  to a method with the given name.
+  3) If the context is a hash, the data is the value associated with the
+  name.
+  4) If the context is an object, the data is the value returned by the
+  method with the given name.
+  5) If any name parts were retained in step 1, each should be resolved
+  against a context stack containing only the result from the former
+  resolution.  If any part fails resolution, the result should be considered
+  falsey, and should interpolate as the empty string.
+Data should be coerced into a string (and escaped, if appropriate) before
+interpolation.
+
+The Interpolation tags MUST NOT be treated as standalone.
+
+
+
 	@brief Bootstrap test suite from https://github.com/mustache/spec
 
 
