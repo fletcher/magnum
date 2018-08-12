@@ -192,7 +192,7 @@ void indent_text(DString * text, const char * indent, size_t indent_len) {
 static int load_partial(char * name, DString * partial, struct closure * c, char ** search_directory) {
 	// Require search_directory to enable partials
 	if (*search_directory == NULL) {
-		return;
+		return -1;
 	}
 
 	DString * load;
@@ -302,6 +302,10 @@ static int print(const char * name, struct closure * c, int escape) {
 
 							case '\"':
 								d_string_append_c_array(c->out, "&quot;", 6);
+								break;
+
+							case '\0':
+								// Empty string
 								break;
 
 							default:
@@ -960,6 +964,13 @@ void Test_magnum(CuTest* tc) {
 	d_string_erase(out, 0, -1);
 	magnum_populate_from_string(source, "{  }", out, NULL);
 	CuAssertStrEquals(tc, "", out->str);
+
+	// Empty string
+	d_string_erase(source, 0, -1);
+	d_string_erase(out, 0, -1);
+	d_string_append(source, "foo = \"{{foo}}\"\nbar = \"{{bar}}\"\n");
+	magnum_populate_from_string(source, "{ \"foo\": \"\", \"bar\": \"BAR\"}", out, NULL);
+	CuAssertStrEquals(tc, "foo = \"\"\nbar = \"BAR\"\n", out->str);
 
 
 	d_string_free(source, true);
