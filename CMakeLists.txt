@@ -8,10 +8,10 @@ cmake_minimum_required (VERSION 2.6)
 set (My_Project_Title "Magnum")
 set (My_Project_Description "C implementation of Mustache logic-less templates")
 set (My_Project_Author "Fletcher T. Penney")
-set (My_Project_Revised_Date "2018-08-01")
+set (My_Project_Revised_Date "2018-08-12")
 set (My_Project_Version_Major 1)
 set (My_Project_Version_Minor 1)
-set (My_Project_Version_Patch 0)
+set (My_Project_Version_Patch 1)
 
 set (My_Project_Version "${My_Project_Version_Major}.${My_Project_Version_Minor}.${My_Project_Version_Patch}")
 
