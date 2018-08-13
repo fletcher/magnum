@@ -308,6 +308,7 @@ static int print(const char * name, struct closure * c, int escape) {
 
 							case '\0':
 								// Empty string
+								s--;
 								break;
 
 							default:
