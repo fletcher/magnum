@@ -732,6 +732,9 @@ static int parse(DString * source, const char * opener, const char * closer, str
 
 					if (rc == 0) {
 						rc = parse(partial, "{{", "}}", closure, dir);
+					} else if (rc == -2) {
+						// If rc == -2, don't parse the partial, but just insert the resulting text
+						d_string_append_c_array(closure->out, partial->str, partial->currentStringLength);
 					}
 
 					free(dir);
