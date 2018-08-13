@@ -80,14 +80,22 @@ typedef struct DString DString;
 typedef struct json_value_t  JSON_Value;
 
 
+typedef struct closure closure;
+
 /// Given a source string, populate it using data from a JSON value.
 /// The resulting text will be appended to `out`.
-int magnum_populate_from_json(DString * source, JSON_Value * json, DString * out, const char * search_directory);
+/// Pass NULL as `load_p` to use the default load_partial function.
+int magnum_populate_from_json(DString * source, JSON_Value * json, DString * out, const char * search_directory, int (*load_p)(char *, DString *, closure *, char **));
 
 
 /// Given a source string, populate it using data from a JSON string.
 /// The resulting text will be appended to `out`.
 int magnum_populate_from_string(DString * source, const char * string, DString * out, const char * search_directory);
+
+
+/// Given a source string, populate it using data from a JSON string, using a custom load_partial routine
+/// The resulting text will be appended to `out`.
+int magnum_populate_from_string_custom_partial(DString * source, const char * string, DString * out, const char * search_directory, int (*load_p)(char *, DString *, struct closure *, char **));
 
 
 /// Given a source string, populate it using data from a JSON file.
