@@ -98,6 +98,8 @@ struct closure {
 
 	const char *		directory;	//!< Initial search directory for partials
 
+	int (*load_partial)(char *, DString *, struct closure *, char **);
+
 	struct {
 		JSON_Value *	container;
 		JSON_Value *	val;
@@ -192,7 +194,7 @@ void indent_text(DString * text, const char * indent, size_t indent_len) {
 static int load_partial(char * name, DString * partial, struct closure * c, char ** search_directory) {
 	// Require search_directory to enable partials
 	if (*search_directory == NULL) {
-		return;
+		return -1;
 	}
 
 	DString * load;
@@ -302,6 +304,11 @@ static int print(const char * name, struct closure * c, int escape) {
 
 							case '\"':
 								d_string_append_c_array(c->out, "&quot;", 6);
+								break;
+
+							case '\0':
+								// Empty string
+								s--;
 								break;
 
 							default:
@@ -707,7 +714,7 @@ static int parse(DString * source, const char * opener, const char * closer, str
 					partial = d_string_new("");
 					dir = my_strdup(search_directory);
 
-					rc = load_partial(key_name, partial, closure, &dir);
+					rc = (*(closure->load_partial))(key_name, partial, closure, &dir);
 
 					if (standalone) {
 						// Determine leading whitespace
@@ -725,6 +732,9 @@ static int parse(DString * source, const char * opener, const char * closer, str
 
 					if (rc == 0) {
 						rc = parse(partial, "{{", "}}", closure, dir);
+					} else if (rc == -2) {
+						// If rc == -2, don't parse the partial, but just insert the resulting text
+						d_string_append_c_array(closure->out, partial->str, partial->currentStringLength);
 					}
 
 					free(dir);
@@ -797,7 +807,7 @@ static int parse(DString * source, const char * opener, const char * closer, str
 
 /// Given a source string, populate it using data from a JSON value.
 /// The resulting text will be appended to `out`.
-int magnum_populate_from_json(DString * source, JSON_Value * json, DString * out, const char * search_directory) {
+int magnum_populate_from_json(DString * source, JSON_Value * json, DString * out, const char * search_directory, int (*load_p)(char *, DString *, struct closure *, char **)) {
 	int rc;
 
 	struct closure c;
@@ -810,6 +820,12 @@ int magnum_populate_from_json(DString * source, JSON_Value * json, DString * out
 	c.stack[0].val = json;
 	c.stack[0].index = 0;
 	c.stack[0].count = 1;
+
+	if (load_p) {
+		c.load_partial = load_p;
+	} else {
+		c.load_partial = &load_partial;
+	}
 
 	rc = parse(source, "{{", "}}", &c, search_directory);
 
@@ -826,7 +842,21 @@ int magnum_populate_from_json(DString * source, JSON_Value * json, DString * out
 int magnum_populate_from_string(DString * source, const char * string, DString * out, const char * search_directory) {
 	JSON_Value * v = json_parse_string(string);
 
-	int rc = magnum_populate_from_json(source, v, out, search_directory);
+	int rc = magnum_populate_from_json(source, v, out, search_directory, NULL);
+
+	json_value_free(v);
+
+	return rc;
+}
+
+
+
+/// Given a source string, populate it using data from a JSON string, using a custom load_partial routine
+/// The resulting text will be appended to `out`.
+int magnum_populate_from_string_custom_partial(DString * source, const char * string, DString * out, const char * search_directory, int (*load_p)(char *, DString *, struct closure *, char **)) {
+	JSON_Value * v = json_parse_string(string);
+
+	int rc = magnum_populate_from_json(source, v, out, search_directory, load_p);
 
 	json_value_free(v);
 
@@ -839,7 +869,7 @@ int magnum_populate_from_string(DString * source, const char * string, DString *
 int magnum_populate_from_file(DString * source, const char * fname, DString * out, const char * search_directory) {
 	JSON_Value * v = json_parse_file(fname);
 
-	int rc = magnum_populate_from_json(source, v, out, search_directory);
+	int rc = magnum_populate_from_json(source, v, out, search_directory, NULL);
 
 	json_value_free(v);
 
@@ -858,7 +888,7 @@ int magnum_populate_char_only(const char * source, const char * string, char ** 
 
 	DString * temp = d_string_new("");
 
-	int rc = magnum_populate_from_json(d_source, v, temp, search_directory);
+	int rc = magnum_populate_from_json(d_source, v, temp, search_directory, NULL);
 
 	json_value_free(v);
 
@@ -960,6 +990,13 @@ void Test_magnum(CuTest* tc) {
 	d_string_erase(out, 0, -1);
 	magnum_populate_from_string(source, "{  }", out, NULL);
 	CuAssertStrEquals(tc, "", out->str);
+
+	// Empty string
+	d_string_erase(source, 0, -1);
+	d_string_erase(out, 0, -1);
+	d_string_append(source, "foo = \"{{foo}}\"\nbar = \"{{bar}}\"\n");
+	magnum_populate_from_string(source, "{ \"foo\": \"\", \"bar\": \"BAR\"}", out, NULL);
+	CuAssertStrEquals(tc, "foo = \"\"\nbar = \"BAR\"\n", out->str);
 
 
 	d_string_free(source, true);
