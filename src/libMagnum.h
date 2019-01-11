@@ -24,7 +24,7 @@
 
 /*
 
-	Copyright © 2017-2018 Fletcher T. Penney.
+	Copyright © 2017-2019 Fletcher T. Penney.
 
 	The `magnum` project is released under the MIT License.
 

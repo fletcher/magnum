@@ -5,7 +5,7 @@
 | Title:	| Magnum	|  
 | Author:	| Fletcher T. Penney	|  
 | Date:	| 2018-08-13	|  
-| Copyright:	| Copyright © 2017-2018 Fletcher T. Penney.	|  
+| Copyright:	| Copyright © 2017-2019 Fletcher T. Penney.	|  
 | Version:	| 1.2.0	|  
 
 
