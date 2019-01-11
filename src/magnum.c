@@ -986,6 +986,7 @@ int magnum_populate_char_only(const char * source, const char * string, char ** 
 	DString * d_source = d_string_new("");
 	free(d_source->str);
 	d_source->str = (char *) source;
+	d_source->currentStringLength = strlen(source);
 
 	DString * temp = d_string_new("");
 
@@ -1102,6 +1103,15 @@ void Test_magnum(CuTest* tc) {
 
 	d_string_free(source, true);
 	d_string_free(out, true);
+
+
+	// Char only
+	char *tpl = "A\n\n{{ foo }}\n\n{{bar}}\n\nB\n"; 
+	char *ctx = "{ \"foo\" : \"one\", \"bar\" : 42 }"; 
+	char * char_out;
+
+	magnum_populate_char_only(tpl,ctx,&char_out,NULL);
+	CuAssertStrEquals(tc, "A\n\none\n\n42\n\nB\n", char_out);
 }
 #endif
 
