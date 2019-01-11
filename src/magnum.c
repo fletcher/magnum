@@ -92,11 +92,11 @@
 
 /// Track JSON data and pointer to current object
 struct closure {
-	JSON_Value *		root;		//!< Root data value
+	JSON_Value 	*	root;		//!< Root data value
 	int					depth;		//!< Depth in stack
-	DString *			out;		//!< Output destination
+	DString 	*		out;		//!< Output destination
 
-	const char *		directory;	//!< Initial search directory for partials
+	const char 	*	directory;	//!< Initial search directory for partials
 
 	int (*load_partial)(char *, DString *, struct closure *, char **);
 
@@ -279,52 +279,66 @@ static int print_raw(const char * name, struct closure * closure) {
 
 // Formatting routines from https://stackoverflow.com/questions/277772/avoid-trailing-zeroes-in-printf
 
-void morphNumericString (char *s, int n) {
-    char *p;
-    int count;
+void morphNumericString (char * s, int n) {
+	char * p;
+	int count;
 
-    p = strchr (s,'.');         // Find decimal point, if any.
-    if (p != NULL) {
-        count = n;              // Adjust for more or less decimals.
-        while (count >= 0) {    // Maximum decimals allowed.
-             count--;
-             if (*p == '\0')    // If there's less than desired.
-                 break;
-             p++;               // Next character.
-        }
+	p = strchr (s, '.');        // Find decimal point, if any.
 
-        *p-- = '\0';            // Truncate string.
-        while (*p == '0')       // Remove trailing zeros.
-            *p-- = '\0';
+	if (p != NULL) {
+		count = n;              // Adjust for more or less decimals.
 
-        if (*p == '.') {        // If all decimals were zeros, remove ".".
-            *p = '\0';
-        }
-    }
+		while (count >= 0) {    // Maximum decimals allowed.
+			count--;
+
+			if (*p == '\0') {  // If there's less than desired.
+				break;
+			}
+
+			p++;               // Next character.
+		}
+
+		*p-- = '\0';            // Truncate string.
+
+		while (*p == '0') {     // Remove trailing zeros.
+			*p-- = '\0';
+		}
+
+		if (*p == '.') {        // If all decimals were zeros, remove ".".
+			*p = '\0';
+		}
+	}
 }
 
 
 /// Round to this many decimal places
-void nDecimals (char *s, double d, int n) {
-    int sz; double d2;
+void nDecimals (char * s, double d, int n) {
+	int sz;
+	double d2;
 
-    // Allow for negative.
+	// Allow for negative.
 
-    d2 = (d >= 0) ? d : -d;
-    sz = (d >= 0) ? 0 : 1;
+	d2 = (d >= 0) ? d : -d;
+	sz = (d >= 0) ? 0 : 1;
 
-    // Add one for each whole digit (0.xx special case).
+	// Add one for each whole digit (0.xx special case).
 
-    if (d2 < 1) sz++;
-    while (d2 >= 1) { d2 /= 10.0; sz++; }
+	if (d2 < 1) {
+		sz++;
+	}
 
-    // Adjust for decimal point and fractionals.
+	while (d2 >= 1) {
+		d2 /= 10.0;
+		sz++;
+	}
 
-    sz += 1 + n;
+	// Adjust for decimal point and fractionals.
 
-    // Create format string then use it.
+	sz += 1 + n;
 
-    sprintf (s, "%*.*f", sz, n, d);
+	// Create format string then use it.
+
+	sprintf (s, "%*.*f", sz, n, d);
 }
 
 
@@ -340,12 +354,12 @@ void print_double(DString * out, double value) {
 		nDecimals(buf, value, 6);
 
 		// Clean up
-		morphNumericString(buf,6);
+		morphNumericString(buf, 6);
 	} else {
 		// "Small" numbers use more
 
 		nDecimals(buf, value, 15);
-		morphNumericString(buf,15);
+		morphNumericString(buf, 15);
 	}
 
 	// Append it
@@ -354,7 +368,7 @@ void print_double(DString * out, double value) {
 
 
 #ifdef TEST
-void Test_print_double(CuTest* tc) {
+void Test_print_double(CuTest * tc) {
 	DString * out = d_string_new("");
 	double d = 1234567890123456;
 
@@ -553,7 +567,7 @@ static int parse(DString * source, const char * opener, const char * closer, str
 	struct {
 		const char *	key;
 		size_t			key_len;
-		const char * 	again;
+		const char  *	again;
 		int 			entered;
 		int				visible;
 	} stack[kMaxDepth];
@@ -1004,7 +1018,7 @@ int magnum_populate_char_only(const char * source, const char * string, char ** 
 
 
 #ifdef TEST
-void Test_magnum(CuTest* tc) {
+void Test_magnum(CuTest * tc) {
 	DString * source = d_string_new("");
 	DString * out = d_string_new("");
 
@@ -1106,11 +1120,11 @@ void Test_magnum(CuTest* tc) {
 
 
 	// Char only
-	char *tpl = "A\n\n{{ foo }}\n\n{{bar}}\n\nB\n"; 
-	char *ctx = "{ \"foo\" : \"one\", \"bar\" : 42 }"; 
+	char * tpl = "A\n\n{{ foo }}\n\n{{bar}}\n\nB\n";
+	char * ctx = "{ \"foo\" : \"one\", \"bar\" : 42 }";
 	char * char_out;
 
-	magnum_populate_char_only(tpl,ctx,&char_out,NULL);
+	magnum_populate_char_only(tpl, ctx, &char_out, NULL);
 	CuAssertStrEquals(tc, "A\n\none\n\n42\n\nB\n", char_out);
 }
 #endif

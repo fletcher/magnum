@@ -103,7 +103,7 @@ JSON_Value * json_from_file(const char * fname) {
 
 
 #ifdef TEST
-void Test_json_from_string(CuTest* tc) {
+void Test_json_from_string(CuTest * tc) {
 	JSON_Value * root;
 	JSON_Object * object;
 	const char * string;
@@ -125,7 +125,7 @@ void Test_json_from_string(CuTest* tc) {
 }
 
 
-void Test_json_values(CuTest* tc) {
+void Test_json_values(CuTest * tc) {
 	JSON_Value * json = json_from_string("{ \"bool\" : true, \"number\" : 123456789 }");
 	JSON_Object * o = json_value_get_object(json);
 

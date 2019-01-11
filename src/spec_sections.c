@@ -91,7 +91,7 @@ appropriate.
 #ifdef TEST
 #include "CuTest.h"
 
-void Test_magnum_spec_sections(CuTest* tc) {
+void Test_magnum_spec_sections(CuTest * tc) {
 	DString * source = d_string_new("");
 	DString * out = d_string_new("");
 

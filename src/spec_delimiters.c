@@ -64,7 +64,7 @@ Set Delimiter tags SHOULD be treated as standalone when appropriate.
 #ifdef TEST
 #include "CuTest.h"
 
-void Test_magnum_spec_delimiters(CuTest* tc) {
+void Test_magnum_spec_delimiters(CuTest * tc) {
 	DString * source = d_string_new("");
 	DString * out = d_string_new("");
 
