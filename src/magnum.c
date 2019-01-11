@@ -283,28 +283,28 @@ void morphNumericString (char * s, int n) {
 	char * p;
 	int count;
 
-	p = strchr (s, '.');        // Find decimal point, if any.
+	p = strchr (s, '.');			// Find decimal point, if any.
 
 	if (p != NULL) {
-		count = n;              // Adjust for more or less decimals.
+		count = n;					// Adjust for more or less decimals.
 
-		while (count >= 0) {    // Maximum decimals allowed.
+		while (count >= 0) {		// Maximum decimals allowed.
 			count--;
 
-			if (*p == '\0') {  // If there's less than desired.
+			if (*p == '\0') {		// If there's less than desired.
 				break;
 			}
 
-			p++;               // Next character.
+			p++;					// Next character.
 		}
 
-		*p-- = '\0';            // Truncate string.
+		*p-- = '\0';				// Truncate string.
 
-		while (*p == '0') {     // Remove trailing zeros.
+		while (*p == '0') {			// Remove trailing zeros.
 			*p-- = '\0';
 		}
 
-		if (*p == '.') {        // If all decimals were zeros, remove ".".
+		if (*p == '.') {			// If all decimals were zeros, remove ".".
 			*p = '\0';
 		}
 	}
@@ -385,6 +385,11 @@ void Test_print_double(CuTest * tc) {
 	d = 0.000004999000004999;
 	print_double(out, d);
 	CuAssertStrEquals(tc, "0.000004999000005", out->str);
+	d_string_erase(out, 0, -1);
+
+	d = 0.000004999000000000;
+	print_double(out, d);
+	CuAssertStrEquals(tc, "0.000004999", out->str);
 	d_string_erase(out, 0, -1);
 
 	d_string_free(out, true);
