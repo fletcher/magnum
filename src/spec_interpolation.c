@@ -81,7 +81,7 @@ The Interpolation tags MUST NOT be treated as standalone.
 #ifdef TEST
 #include "CuTest.h"
 
-void Test_magnum_spec_interpolation(CuTest* tc) {
+void Test_magnum_spec_interpolation(CuTest * tc) {
 	DString * source = d_string_new("");
 	DString * out = d_string_new("");
 

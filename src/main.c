@@ -37,7 +37,7 @@
 #include "libMagnum.h"
 
 
-int main( int argc, char** argv ) {
+int main( int argc, char ** argv ) {
 	if (argc > 2) {
 		argv++;
 
@@ -54,7 +54,7 @@ int main( int argc, char** argv ) {
 
 			template = scan_file(*argv++);
 
-			magnum_populate_from_json(template, j, out, dir);
+			magnum_populate_from_json(template, j, out, dir, NULL);
 
 			d_string_free(template, true);
 			free(dir);

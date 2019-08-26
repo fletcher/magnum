@@ -15,7 +15,7 @@
 
 /*
 
-	Copyright © 2017-2018 Fletcher T. Penney.
+	Copyright © 2017-2019 Fletcher T. Penney.
 
 	The `magnum` project is released under the MIT License.
 
@@ -92,11 +92,13 @@
 
 /// Track JSON data and pointer to current object
 struct closure {
-	JSON_Value *		root;		//!< Root data value
+	JSON_Value 	*	root;		//!< Root data value
 	int					depth;		//!< Depth in stack
-	DString *			out;		//!< Output destination
+	DString 	*		out;		//!< Output destination
 
-	const char *		directory;	//!< Initial search directory for partials
+	const char 	*	directory;	//!< Initial search directory for partials
+
+	int (*load_partial)(char *, DString *, struct closure *, char **);
 
 	struct {
 		JSON_Value *	container;
@@ -275,6 +277,126 @@ static int print_raw(const char * name, struct closure * closure) {
 }
 
 
+// Formatting routines from https://stackoverflow.com/questions/277772/avoid-trailing-zeroes-in-printf
+
+void morphNumericString (char * s, int n) {
+	char * p;
+	int count;
+
+	p = strchr (s, '.');			// Find decimal point, if any.
+
+	if (p != NULL) {
+		count = n;					// Adjust for more or less decimals.
+
+		while (count >= 0) {		// Maximum decimals allowed.
+			count--;
+
+			if (*p == '\0') {		// If there's less than desired.
+				break;
+			}
+
+			p++;					// Next character.
+		}
+
+		*p-- = '\0';				// Truncate string.
+
+		while (*p == '0') {			// Remove trailing zeros.
+			*p-- = '\0';
+		}
+
+		if (*p == '.') {			// If all decimals were zeros, remove ".".
+			*p = '\0';
+		}
+	}
+}
+
+
+/// Round to this many decimal places
+void nDecimals (char * s, double d, int n) {
+	int sz;
+	double d2;
+
+	// Allow for negative.
+
+	d2 = (d >= 0) ? d : -d;
+	sz = (d >= 0) ? 0 : 1;
+
+	// Add one for each whole digit (0.xx special case).
+
+	if (d2 < 1) {
+		sz++;
+	}
+
+	while (d2 >= 1) {
+		d2 /= 10.0;
+		sz++;
+	}
+
+	// Adjust for decimal point and fractionals.
+
+	sz += 1 + n;
+
+	// Create format string then use it.
+
+	sprintf (s, "%*.*f", sz, n, d);
+}
+
+
+/// Clean up double numbers for printing -- should be reasonable for "normal" numbers,
+/// but obviously some scientific uses may have difficulty
+void print_double(DString * out, double value) {
+	char buf[50];
+
+	if (value > 1.0 ) {
+		// "Big" numbers use max of 10 decimals
+
+		// First, trim to 10 decimals -- TODO: Should this be fixed decimal place?  Total number of digits?
+		nDecimals(buf, value, 6);
+
+		// Clean up
+		morphNumericString(buf, 6);
+	} else {
+		// "Small" numbers use more
+
+		nDecimals(buf, value, 15);
+		morphNumericString(buf, 15);
+	}
+
+	// Append it
+	d_string_append(out, buf);
+}
+
+
+#ifdef TEST
+void Test_print_double(CuTest * tc) {
+	DString * out = d_string_new("");
+	double d = 1234567890123456;
+
+	print_double(out, d);
+	CuAssertStrEquals(tc, "1234567890123456", out->str);
+	d_string_erase(out, 0, -1);
+
+	d = 3.1415926535897932384626433832795028841971693993751058209749445923;
+	print_double(out, d);
+	CuAssertStrEquals(tc, "3.141593", out->str);
+	d_string_erase(out, 0, -1);
+
+
+	d = 0.000004999000004999;
+	print_double(out, d);
+	CuAssertStrEquals(tc, "0.000004999000005", out->str);
+	d_string_erase(out, 0, -1);
+
+	d = 0.000004999000000000;
+	print_double(out, d);
+	CuAssertStrEquals(tc, "0.000004999", out->str);
+	d_string_erase(out, 0, -1);
+
+	d_string_free(out, true);
+}
+#endif
+
+
 /// Replace designated range in source with value of `name`
 static int print(const char * name, struct closure * c, int escape) {
 	JSON_Value * v = find(c, name);
@@ -306,6 +428,7 @@ static int print(const char * name, struct closure * c, int escape) {
 
 							case '\0':
 								// Empty string
+								s--;
 								break;
 
 							default:
@@ -320,7 +443,7 @@ static int print(const char * name, struct closure * c, int escape) {
 				break;
 
 			case JSONNumber:
-				d_string_append_printf(c->out, "%g", json_value_get_number(v));
+				print_double(c->out, json_value_get_number(v));
 				break;
 
 			default:
@@ -449,7 +572,7 @@ static int parse(DString * source, const char * opener, const char * closer, str
 	struct {
 		const char *	key;
 		size_t			key_len;
-		const char * 	again;
+		const char  *	again;
 		int 			entered;
 		int				visible;
 	} stack[kMaxDepth];
@@ -711,7 +834,7 @@ static int parse(DString * source, const char * opener, const char * closer, str
 					partial = d_string_new("");
 					dir = my_strdup(search_directory);
 
-					rc = load_partial(key_name, partial, closure, &dir);
+					rc = (*(closure->load_partial))(key_name, partial, closure, &dir);
 
 					if (standalone) {
 						// Determine leading whitespace
@@ -729,6 +852,9 @@ static int parse(DString * source, const char * opener, const char * closer, str
 
 					if (rc == 0) {
 						rc = parse(partial, "{{", "}}", closure, dir);
+					} else if (rc == -2) {
+						// If rc == -2, don't parse the partial, but just insert the resulting text
+						d_string_append_c_array(closure->out, partial->str, partial->currentStringLength);
 					}
 
 					free(dir);
@@ -801,7 +927,7 @@ static int parse(DString * source, const char * opener, const char * closer, str
 
 /// Given a source string, populate it using data from a JSON value.
 /// The resulting text will be appended to `out`.
-int magnum_populate_from_json(DString * source, JSON_Value * json, DString * out, const char * search_directory) {
+int magnum_populate_from_json(DString * source, JSON_Value * json, DString * out, const char * search_directory, int (*load_p)(char *, DString *, struct closure *, char **)) {
 	int rc;
 
 	struct closure c;
@@ -814,6 +940,12 @@ int magnum_populate_from_json(DString * source, JSON_Value * json, DString * out
 	c.stack[0].val = json;
 	c.stack[0].index = 0;
 	c.stack[0].count = 1;
+
+	if (load_p) {
+		c.load_partial = load_p;
+	} else {
+		c.load_partial = &load_partial;
+	}
 
 	rc = parse(source, "{{", "}}", &c, search_directory);
 
@@ -830,7 +962,21 @@ int magnum_populate_from_json(DString * source, JSON_Value * json, DString * out
 int magnum_populate_from_string(DString * source, const char * string, DString * out, const char * search_directory) {
 	JSON_Value * v = json_parse_string(string);
 
-	int rc = magnum_populate_from_json(source, v, out, search_directory);
+	int rc = magnum_populate_from_json(source, v, out, search_directory, NULL);
+
+	json_value_free(v);
+
+	return rc;
+}
+
+
+
+/// Given a source string, populate it using data from a JSON string, using a custom load_partial routine
+/// The resulting text will be appended to `out`.
+int magnum_populate_from_string_custom_partial(DString * source, const char * string, DString * out, const char * search_directory, int (*load_p)(char *, DString *, struct closure *, char **)) {
+	JSON_Value * v = json_parse_string(string);
+
+	int rc = magnum_populate_from_json(source, v, out, search_directory, load_p);
 
 	json_value_free(v);
 
@@ -843,7 +989,7 @@ int magnum_populate_from_string(DString * source, const char * string, DString *
 int magnum_populate_from_file(DString * source, const char * fname, DString * out, const char * search_directory) {
 	JSON_Value * v = json_parse_file(fname);
 
-	int rc = magnum_populate_from_json(source, v, out, search_directory);
+	int rc = magnum_populate_from_json(source, v, out, search_directory, NULL);
 
 	json_value_free(v);
 
@@ -859,10 +1005,11 @@ int magnum_populate_char_only(const char * source, const char * string, char ** 
 	DString * d_source = d_string_new("");
 	free(d_source->str);
 	d_source->str = (char *) source;
+	d_source->currentStringLength = strlen(source);
 
 	DString * temp = d_string_new("");
 
-	int rc = magnum_populate_from_json(d_source, v, temp, search_directory);
+	int rc = magnum_populate_from_json(d_source, v, temp, search_directory, NULL);
 
 	json_value_free(v);
 
@@ -876,7 +1023,7 @@ int magnum_populate_char_only(const char * source, const char * string, char ** 
 
 
 #ifdef TEST
-void Test_magnum(CuTest* tc) {
+void Test_magnum(CuTest * tc) {
 	DString * source = d_string_new("");
 	DString * out = d_string_new("");
 
@@ -975,6 +1122,15 @@ void Test_magnum(CuTest* tc) {
 
 	d_string_free(source, true);
 	d_string_free(out, true);
+
+
+	// Char only
+	char * tpl = "A\n\n{{ foo }}\n\n{{bar}}\n\nB\n";
+	char * ctx = "{ \"foo\" : \"one\", \"bar\" : 42 }";
+	char * char_out;
+
+	magnum_populate_char_only(tpl, ctx, &char_out, NULL);
+	CuAssertStrEquals(tc, "A\n\none\n\n42\n\nB\n", char_out);
 }
 #endif
 

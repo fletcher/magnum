@@ -70,7 +70,7 @@ indentation, and prepended to each line of the partial before rendering.
 #ifdef TEST
 #include "CuTest.h"
 
-void Test_magnum_spec_partials(CuTest* tc) {
+void Test_magnum_spec_partials(CuTest * tc) {
 	DString * source = d_string_new("");
 	DString * out = d_string_new("");
 

@@ -80,7 +80,7 @@
 // Some operating systems do not supply vasprintf() -- standardize on this
 // replacement from:
 //		https://github.com/esp8266/Arduino/issues/1954
-int vasprintf(char** strp, const char* fmt, va_list ap) {
+int vasprintf(char ** strp, const char * fmt, va_list ap) {
 	va_list ap2;
 	va_copy(ap2, ap);
 
@@ -92,7 +92,7 @@ int vasprintf(char** strp, const char* fmt, va_list ap) {
 	}
 
 	size += 1;
-	*strp = (char*)malloc(size * sizeof(char));
+	*strp = (char *)malloc(size * sizeof(char));
 	return vsnprintf(*strp, size, fmt, ap);
 }
 
@@ -105,8 +105,8 @@ int vasprintf(char** strp, const char* fmt, va_list ap) {
 
 
 /// Create a new dynamic string
-DString* d_string_new(const char * startingString) {
-	DString* newString = malloc(sizeof(DString));
+DString * d_string_new(const char * startingString) {
+	DString * newString = malloc(sizeof(DString));
 
 	if (!newString) {
 		return NULL;
@@ -140,12 +140,12 @@ DString* d_string_new(const char * startingString) {
 
 
 /// Free dynamic string
-char* d_string_free(DString * ripString, bool freeCharacterData) {
+char * d_string_free(DString * ripString, bool freeCharacterData) {
 	if (ripString == NULL) {
 		return NULL;
 	}
 
-	char* returnedString = ripString->str;
+	char * returnedString = ripString->str;
 
 	if (freeCharacterData) {
 		if (ripString->str != NULL) {
@@ -176,7 +176,7 @@ static void ensureStringBufferCanHold(DString * baseString, size_t newStringSize
 			}
 		}
 
-		char *temp;
+		char * temp;
 		temp = realloc(baseString->str, newBufferSize);
 
 		if (temp == NULL) {
@@ -235,7 +235,7 @@ void d_string_append_printf(DString * baseString, const char * format, ...) {
 	va_list args;
 	va_start(args, format);
 
-	char* formattedString = NULL;
+	char * formattedString = NULL;
 	vasprintf(&formattedString, format, args);
 
 	if (formattedString != NULL) {
@@ -307,7 +307,7 @@ void d_string_insert_printf(DString * baseString, size_t pos, const char * forma
 	va_list args;
 	va_start(args, format);
 
-	char* formattedString = NULL;
+	char * formattedString = NULL;
 	vasprintf(&formattedString, format, args);
 
 	if (formattedString != NULL) {
