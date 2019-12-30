@@ -336,7 +336,9 @@ ADD_PUBLIC_HEADER(libMagnum src/d_string.h)
 ADD_PUBLIC_HEADER(libMagnum src/parson.h)
 
 # Create a command-line app?
-if (NOT DEFINED TEST)
+if(hasParent)
+else()
+
 	add_executable(magnum
 		src/main.c
 		src/d_string.c
@@ -368,7 +370,8 @@ endif()
 
 # install (FILES ${public_header_files} DESTINATION local/include/libFoo) 
 
-if (NOT DEFINED TEST)
+if(hasParent)
+else()
 	install (TARGETS magnum
 		DESTINATION bin
 		COMPONENT application
