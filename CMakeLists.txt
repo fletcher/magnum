@@ -92,7 +92,7 @@ MACRO(ADD_PUBLIC_HEADER target filename)
 
 	SET_TARGET_PROPERTIES(${target} PROPERTIES
 		XCODE_ATTRIBUTE_VALID_ARCHITECTURES
-		"x86_64 i386 armv6 armv7 armv7s arm64"
+		"x86_64 armv6 armv7 armv7s arm64"
 	)
 
 ENDMACRO(ADD_PUBLIC_HEADER)
@@ -339,15 +339,18 @@ ADD_PUBLIC_HEADER(libMagnum src/parson.h)
 if(hasParent)
 else()
 
-	add_executable(magnum
-		src/main.c
-		src/d_string.c
-		src/d_string.h
-		${header_files}
-	)
+	if (DEFINED TEST)
+	else()
+		add_executable(magnum
+			src/main.c
+			src/d_string.c
+			src/d_string.h
+			${header_files}
+		)
 
-	# Link the library to the app?
-	target_link_libraries(magnum libMagnum)
+		# Link the library to the app?
+		target_link_libraries(magnum libMagnum)
+	endif()
 endif()
 
 # Xcode settings for fat binaries
@@ -372,10 +375,13 @@ endif()
 
 if(hasParent)
 else()
-	install (TARGETS magnum
-		DESTINATION bin
-		COMPONENT application
-	)
+	if (DEFINED TEST)
+	else()
+		install (TARGETS magnum
+			DESTINATION bin
+			COMPONENT application
+		)
+	endif()
 endif()
 
 set (CPACK_COMPONENT_APPLICATION_DISPLAY_NAME "Magnum")
