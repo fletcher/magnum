@@ -2,7 +2,6 @@
 CHANGELOG-UNRELEASED
 documentation
 
-build/
 
 # Developer Tools
 *.pbxuser
@@ -21,7 +20,12 @@ profile
 DerivedData
 .idea/
 
+build
+build-test
 build-xcode
-build-xcode-debug
+build-xcode-test
+
+*.xcuserstate
+*.xcbkptlist
 
 *.orig
