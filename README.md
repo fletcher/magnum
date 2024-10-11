@@ -2,11 +2,11 @@
 
 |	|	|  
 | ----------	| -------------------------	|  
-| Title:	| Magnum	|  
+| Title:	| libMagnum	|  
 | Author:	| Fletcher T. Penney	|  
-| Date:	| 2018-08-13	|  
-| Copyright:	| Copyright © 2017-2019 Fletcher T. Penney.	|  
-| Version:	| 1.2.0	|  
+| Date:	| 2024-10-11	|  
+| Copyright:	| Copyright © 2017-2024 Fletcher T. Penney.	|  
+| Version:	| 1.3.0	|  
 
 
 ## Introduction ##
